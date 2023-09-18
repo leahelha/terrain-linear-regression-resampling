@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import train_test_split
+from sklearn.linear_model import Lasso
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
@@ -104,6 +105,43 @@ def fit_predict_ridge(x, y, pol_degree, lmbda):
 
     return beta, mse_train, mse_test, r2_train, r2_test
 
+def fit_predict_lasso(x, y, pol_degree, lmbda):
+    '''For a given polynomial order, makes and trains a Lasso regression model and calculates MSE for both training and test data.'''
+    
+    # Make design matrix and split into training and test data
+    X = PolynomialFeatures(pol_degree, include_bias = False).fit_transform(x) # without intercept
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 3) # random_state gives same partition across multiple function calls
+    
+    # Scale data by subtracting mean
+    X_scaler = np.mean(X_train, axis = 0)
+    y_scaler = np.mean(y_train)
+    X_train_scaled = X_train - X_scaler
+    y_train_scaled = y_train - y_scaler
+    X_test_scaled = X_test - X_scaler
+
+    beta = [0] * len(lmbda)
+    mse_train = np.zeros_like(lmbda)
+    mse_test = np.zeros_like(lmbda)
+    r2_train = np.zeros_like(lmbda)
+    r2_test = np.zeros_like(lmbda)
+
+    for i in range(len(lmbda)):
+        # Fit parametres
+        model = Lasso(lmbda[i], max_iter = 5000, tol = 1e-2).fit(X_train_scaled, y_train_scaled)
+        beta[i] = model.coef_
+
+        # Make predictions
+        y_train_pred = X_train_scaled @ beta[i] + y_scaler
+        y_test_pred = X_test_scaled @ beta[i] + y_scaler
+
+        # Calculate MSE and R^2 for both training and test data
+        mse_train[i] = mse_own(y_train_pred, y_train)
+        mse_test[i] = mse_own(y_test_pred, y_test)
+        r2_train[i] = r2_own(y_train_pred, y_train)
+        r2_test[i] = r2_own(y_test_pred, y_test)
+
+    return beta, mse_train, mse_test, r2_train, r2_test
+
 def plot_ols(train_results, test_results, ylabel, name):
     '''Plots either MSE or R2 score for train and test data from OLS and saves to file.'''
     plt.figure(figsize = (6,4))
@@ -114,8 +152,8 @@ def plot_ols(train_results, test_results, ylabel, name):
     plt.legend()
     plt.savefig(f"plots/{name}.pdf")
 
-def plot_ridge(train_results, test_results, ylabel, name):
-    '''Plots either MSE or R2 score for train and test data from Ridge regression and saves to file.'''
+def plot_ridge_or_lasso(train_results, test_results, ylabel, name):
+    '''Plots either MSE or R2 score for train and test data from Ridge or Lasso regression and saves to file.'''
     plt.figure(figsize = (6,12))
     for i in range(n_deg_max): # one subplot for each polynomial degree
         plt.subplot(n_deg_max, 1, i+1)
@@ -183,5 +221,18 @@ for i in range(n_deg_max):
     ridge["r2_test"][i] = ridge_results[4]
 
 # Plot result
-plot_ridge(ridge["mse_train"], ridge["mse_test"], "Mean Squared Error", "mse_ridge")
-plot_ridge(ridge["r2_train"], ridge["r2_test"], f"$R^2$", "r2_ridge")
+plot_ridge_or_lasso(ridge["mse_train"], ridge["mse_test"], "Mean Squared Error", "mse_ridge")
+plot_ridge_or_lasso(ridge["r2_train"], ridge["r2_test"], f"$R^2$", "r2_ridge")
+
+# Calculate Lasso regression for polynomials of degree 1 to n_deg_max
+for i in range(n_deg_max):
+    lasso_results = fit_predict_lasso(xy, z.flatten(), i+1, lmbda)
+    lasso["beta"][i] = lasso_results[0]
+    lasso["mse_train"][i] = lasso_results[1]
+    lasso["mse_test"][i] = lasso_results[2]
+    lasso["r2_train"][i] = lasso_results[3]
+    lasso["r2_test"][i] = lasso_results[4]
+
+# Plot result
+plot_ridge_or_lasso(lasso["mse_train"], lasso["mse_test"], "Mean Squared Error", "mse_lasso")
+plot_ridge_or_lasso(lasso["r2_train"], lasso["r2_test"], f"$R^2$", "r2_lasso")
