@@ -20,16 +20,16 @@ class regression_class:
         self.ridge = dict.fromkeys(keys)
         self.lasso = dict.fromkeys(keys)
         for key in self.ols.keys():
-            self.ols[key] = [0]*n_deg_max
-            self.ridge[key] = [0]*n_deg_max
-            self.lasso[key] = [0]*n_deg_max
+            self.ols[key] = [0]*self.n_deg_max
+            self.ridge[key] = [0]*self.n_deg_max
+            self.lasso[key] = [0]*self.n_deg_max
         
         self.make_design_matrix()
         self.scale_design_matrix()
     
     def ols_regression(self):
         '''Calculates OLS for polynomials of degree 1 to n_deg_max.'''
-        for i in range(n_deg_max):
+        for i in range(self.n_deg_max):
             ols_results = self.fit_predict_ols(i+1)
             self.ols["beta"][i] = ols_results[0]
             self.ols["mse_train"][i] = ols_results[1]
@@ -39,7 +39,7 @@ class regression_class:
 
     def ridge_regression(self):
         '''Calculates Ridge regression for polynomials of degree 1 to n_deg_max.'''
-        for i in range(n_deg_max):
+        for i in range(self.n_deg_max):
             ridge_results = self.fit_predict_ridge(i+1)
             self.ridge["beta"][i] = ridge_results[0]
             self.ridge["mse_train"][i] = ridge_results[1]
@@ -49,7 +49,7 @@ class regression_class:
     
     def lasso_regression(self):
         '''Calculates Lasso regression for polynomials of degree 1 to n_deg_max.'''
-        for i in range(n_deg_max):
+        for i in range(self.n_deg_max):
             lasso_results = self.fit_predict_lasso(i+1)
             self.lasso["beta"][i] = lasso_results[0]
             self.lasso["mse_train"][i] = lasso_results[1]
@@ -75,6 +75,21 @@ class regression_class:
         self.plot_ridge_or_lasso(self.lasso["r2_train"], self.lasso["r2_test"], f"$R^2$", "r2_lasso")
         self.plot_beta_ridge_or_lasso(self.lasso["beta"], self.lmbda, "beta_lasso")
 
+    def predict_ols(self, pol_degree):
+        N = int((pol_degree+1)*(pol_degree+2)/2 - 1)
+        X = (self.X - self.X_scaler)[:, 0:N]
+        return X @ self.ols["beta"][pol_degree-1] + self.y_scaler
+
+    def predict_ridge(self, pol_degree, lmbda_n):
+        N = int((pol_degree+1)*(pol_degree+2)/2 - 1)
+        X = (self.X - self.X_scaler)[:, 0:N]
+        return X @ self.ridge["beta"][pol_degree-1][lmbda_n] + self.y_scaler
+
+    def predict_lasso(self, pol_degree, lmbda_n):
+        N = int((pol_degree+1)*(pol_degree+2)/2 - 1)
+        X = (self.X - self.X_scaler)[:, 0:N]
+        return X @ self.lasso["beta"][pol_degree-1][lmbda_n] + self.y_scaler
+
     def plot_ols(self, train_results, test_results, ylabel, name):
         '''Plots either MSE or R2 score for train and test data from OLS and saves to file.'''
         plt.figure(figsize = (6,4))
@@ -88,8 +103,8 @@ class regression_class:
     def plot_ridge_or_lasso(self, train_results, test_results, ylabel, name):
         '''Plots either MSE or R2 score for train and test data from Ridge or Lasso regression and saves to file.'''
         plt.figure(figsize = (6,12))
-        for i in range(n_deg_max): # one subplot for each polynomial degree
-            plt.subplot(n_deg_max, 1, i+1)
+        for i in range(self.n_deg_max): # one subplot for each polynomial degree
+            plt.subplot(self.n_deg_max, 1, i+1)
 
             plt.semilogx(self.lmbda, train_results[i], label = "Training data")
             plt.semilogx(self.lmbda, test_results[i], label = "Test data")
@@ -160,7 +175,7 @@ class regression_class:
 
         for i in range(len(self.lmbda)):
             # Fit parametres
-            beta[i] = self.beta_ridge(X_train_scaled, self.y_train_scaled, lmbda[i])
+            beta[i] = self.beta_ridge(X_train_scaled, self.y_train_scaled, self.lmbda[i])
 
             # Make predictions
             y_train_pred = X_train_scaled @ beta[i] + self.y_scaler
@@ -238,6 +253,30 @@ class regression_class:
         self.X_train_scaled = self.X_train - self.X_scaler
         self.y_train_scaled = self.y_train - self.y_scaler
         self.X_test_scaled = self.X_test - self.X_scaler
+    
+    def find_optimal_lambda(self, type):
+        '''For either Ridge or Lasso regression, finds and returns lambda value that gives lowest MSE_test and corresponding MSE_test for each polynomial degree.'''
+        
+        if (type == "ridge"):
+            mse_values = self.ridge["mse_test"]
+        elif (type == "lasso"):
+            mse_values = self.lasso["mse_test"]
+        else:
+            print("Must specify 'ridge' or 'lasso' when calling optimal_lambda.")
+        
+        optimaL_values = [0]*self.n_deg_max
+
+        for i in range(self.n_deg_max):
+            min_index = 0
+            min_el = mse_values[i][0]
+
+            for j in range(len(self.lmbda)):
+                if (mse_values[i][j] < min_el):
+                    min_el = mse_values[i][j]
+                    min_index = j
+            optimaL_values[i] = (self.lmbda[min_index], min_el)
+        
+        return optimaL_values
 
 def FrankeFunction(x,y):
     '''Calculates the two-dimensional Franke's function.'''
@@ -252,33 +291,34 @@ def add_noise(data):
     noise_matrix = np.random.normal(0, 1, data.shape)
     return data + noise_matrix
 
-# Set up dataset
-n = 11 # number of points along one axis, total number of points will be n^2
-start_value = 0
-stop_value = 1
-x = np.sort(np.random.rand(n, 1), axis = 0)
-y = np.sort(np.random.rand(n, 1), axis = 0)
-x_, y_ = np.meshgrid(x, y)
-xy = np.stack((np.ravel(x_),np.ravel(y_)), axis = -1) # formatting needed to set up the design matrix
-# z = add_noise(FrankeFunction(x_, y_))
-z = FrankeFunction(x_, y_)
+if (__name__ == "__main__"):
+    # Set up dataset
+    n = 11 # number of points along one axis, total number of points will be n^2
+    start_value = 0
+    stop_value = 1
+    x = np.sort(np.random.rand(n, 1), axis = 0)
+    y = np.sort(np.random.rand(n, 1), axis = 0)
+    x_, y_ = np.meshgrid(x, y)
+    xy = np.stack((np.ravel(x_),np.ravel(y_)), axis = -1) # formatting needed to set up the design matrix
+    # z = add_noise(FrankeFunction(x_, y_))
+    z = FrankeFunction(x_, y_)
 
-# Plot Franke function
-fig, ax = plt.subplots(subplot_kw = {"projection": "3d"})
-ax.plot_surface(x_, y_, z, cmap = cm.coolwarm)
-fig.savefig("plots/franke.pdf")
+    # Plot Franke function
+    fig, ax = plt.subplots(subplot_kw = {"projection": "3d"})
+    ax.plot_surface(x_, y_, z, cmap = cm.coolwarm)
+    fig.savefig("plots/franke.pdf")
 
-n_deg_max = 5 # max polynomial degree
-lmbda = [0.0001, 0.001, 0.01, 0.1, 1.0] # lambdas to try with Ridge regression
+    n_deg_max = 5 # max polynomial degree
+    lmbda = [0.0001, 0.001, 0.01, 0.1, 1.0] # lambdas to try with Ridge regression
 
-model = regression_class(xy, z.flatten(), n_deg_max, lmbda)
+    model = regression_class(xy, z.flatten(), n_deg_max, lmbda)
 
-# Do regression
-model.ols_regression()
-model.ridge_regression()
-model.lasso_regression()
+    # Do regression
+    model.ols_regression()
+    model.ridge_regression()
+    model.lasso_regression()
 
-# Plot results
-model.plot_ols_results()
-model.plot_ridge_results()
-model.plot_lasso_results()
+    # Plot results
+    model.plot_ols_results()
+    model.plot_ridge_results()
+    model.plot_lasso_results()
