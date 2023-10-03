@@ -17,7 +17,6 @@ def FrankeFunction(x,y):
     return term1 + term2 + term3 + term4
 
 def kFold_linreg(x, y, degree, lin_model, lmbda=None):
-    np.random.seed(1234)
     poly = PolynomialFeatures(degree, include_bias = True) # Skal være False hvis sentrerer
     if lmbda is None:
         model = lin_model(fit_intercept = True) # Skal være False hvis sentrerer
@@ -44,7 +43,7 @@ def kFold_linreg(x, y, degree, lin_model, lmbda=None):
         y_test = y_shuffled[test_inds]
 
         # Train: Centring and design matrix
-        X_train = poly.fit_transform(x_train)
+        X_train = poly.fit_transform(x_train[:, np.newaxis])
         # X_train_scalar = np.mean(X_train, axis = 0)
         # y_train_scalar = np.mean(y_train)
 
@@ -52,7 +51,7 @@ def kFold_linreg(x, y, degree, lin_model, lmbda=None):
         # y_centred_train = y_train - y_train_scalar
 
         # Test: Centring and design matrix
-        X_test = poly.fit_transform(x_test)
+        X_test = poly.fit_transform(x_test[:, np.newaxis])
         # X_test_scalar = np.mean(X_test, axis = 0)
         # y_test_scalar = np.mean(y_test)
 
@@ -60,26 +59,26 @@ def kFold_linreg(x, y, degree, lin_model, lmbda=None):
         # y_centred_test = y_test - y_test_scalar
 
         # Fitting on train data, and predicting on test data:
-        model.fit(X_train, y_train)
+        model.fit(X_train, y_train[:, np.newaxis])
         y_pred = model.predict(X_test)
 
         # Scores: mse
-        scores_KFold[i] = np.sum((y_pred - y_test)**2)/np.size(y_pred)
+        scores_KFold[i] = np.sum((y_pred - y_test[:, np.newaxis])**2)/np.size(y_pred)
 
 
     scores_KFold_mean = np.mean(scores_KFold)
 
-    poly = PolynomialFeatures(degree, include_bias = True) # Funker når det er True???
-    linreg = LinearRegression(fit_intercept = False) # Når den er False så funker det???
-    X = poly.fit_transform(x_shuffled)
-    check_scores = -cross_val_score(linreg, X, y_shuffled, scoring="neg_mean_squared_error", cv=kfold)
+    linreg = LinearRegression(fit_intercept = False)
+    poly = PolynomialFeatures(degree)
+    X = poly.fit_transform(x_shuffled[:, np.newaxis])
+    check_scores = -cross_val_score(linreg, X, y_shuffled[:, np.newaxis], scoring="neg_mean_squared_error", cv=kfold)
 
     # x_centred = x - np.mean(x, axis = 0)
     # y_centred = y - np.mean(y)
     # X_centred = poly.fit_transform(x_centred)
     # check_scores = -cross_val_score(model, X_centred, y_centred, scoring = "neg_mean_squared_error", cv = kfold)
     return scores_KFold, check_scores
-    # return scores_KFold_mean
+
 
 def main():
     # Set up dataset
@@ -89,19 +88,17 @@ def main():
     x_, y_ = np.meshgrid(x, y)
     xy = np.stack((np.ravel(x_),np.ravel(y_)), axis = -1) # formatting needed to set up the design matrix
     z = FrankeFunction(x_, y_)
+    np.random.seed(1234)
 
-    score, check = kFold_linreg(xy, z.flatten(), degree = 5, lin_model = LinearRegression)
+    nsamples = 100
+    x = np.random.randn(nsamples)
+    y = 3*x**2 + np.random.randn(nsamples)
 
-    print("My code | Sklearn code")
+    score, check = kFold_linreg(x, y, degree = 5, lin_model = LinearRegression)
+
+    print("My code    |  Sklearn code")
     for s, c in zip(score, check):
-        print(f"{s:0.7f}  |  {c:0.7f} | rel: {abs(s - c)/c}")
-
-    # nlmbda = 500
-    # lmbda = np.logspace(-3, 5, nlmbda)
-    # for i in trange(len(lmbda)):
-    #     kFold_linreg(xy, z.flatten(), degree = 5, lin_model = Lasso, lmbda = lmbda[i])
-
-    # print(kFold_linreg(xy, z.flatten(), degree = 5, lin_model = LinearRegression))
+        print(f"{s:0.7f}  |  {c:0.7f} | rel: {abs(s - c)/c * 100:0.8f} %")
 
 
 if __name__ == "__main__":
