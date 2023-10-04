@@ -94,7 +94,7 @@ def main():
 
     print("My code | Sklearn code")
     for s, c in zip(score, check):
-        print(f"{s:0.7f}  |  {c:0.7f} | rel: {abs(s - c)/c}")
+        print(f"{s:0.7f}  |  {c:0.7f} | rel: {abs(s - c)/c:0.7E}")
 
     # nlmbda = 500
     # lmbda = np.logspace(-3, 5, nlmbda)

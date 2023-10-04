@@ -235,11 +235,10 @@ class regression_class:
         '''Scales data by subtracting mean'''
         self.X_scaler = np.mean(self.X_train, axis = 0)
         self.y_scaler = np.mean(self.y_train)
-        # Hvorfor centrer man ikke y_test?
         self.X_train_scaled = self.X_train - self.X_scaler
         self.y_train_scaled = self.y_train - self.y_scaler
         self.X_test_scaled = self.X_test - self.X_scaler
-        # self.X_test_scaled = self.X_test - self.X_scaler ?? (meanen fra treningsdataen)
+        
 
 def FrankeFunction(x,y):
     '''Calculates the two-dimensional Franke's function.'''

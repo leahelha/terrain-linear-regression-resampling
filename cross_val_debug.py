@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.preprocessing import PolynomialFeatures
+from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Lasso, Ridge, LinearRegression
 from sklearn.model_selection import KFold, cross_val_score
@@ -16,12 +16,12 @@ def FrankeFunction(x,y):
     term4 = -0.2*np.exp(-(9*x-4)**2 - (9*y-7)**2)
     return term1 + term2 + term3 + term4
 
-def kFold_linreg(x, y, degree, lin_model, lmbda=None):
-    poly = PolynomialFeatures(degree, include_bias = True) # Skal være False hvis sentrerer
+def kFold_linreg(x, y, k, degree, lin_model, lmbda=None):
+    poly = PolynomialFeatures(degree, include_bias = False) # Skal være False hvis sentrerer
     if lmbda is None:
-        model = lin_model(fit_intercept = True) # Skal være False hvis sentrerer
+        model = lin_model(fit_intercept = False) # Forventer sentrert data
     else:
-        model = lin_model(alpha = lmbda, fit_intercept = False)
+        model = lin_model(alpha = lmbda, fit_intercept = False) # Forventer sentrert data
 
     indicies = np.arange(len(x))
     np.random.shuffle(indicies)
@@ -30,7 +30,6 @@ def kFold_linreg(x, y, degree, lin_model, lmbda=None):
     y_shuffled = y[indicies]
 
     # Initialize a KFold instance:
-    k = 5
     kfold = KFold(n_splits = k)
     scores_KFold = np.zeros(k)
 
@@ -43,41 +42,33 @@ def kFold_linreg(x, y, degree, lin_model, lmbda=None):
         y_test = y_shuffled[test_inds]
 
         # Train: Centring and design matrix
-        X_train = poly.fit_transform(x_train[:, np.newaxis])
-        # X_train_scalar = np.mean(X_train, axis = 0)
-        # y_train_scalar = np.mean(y_train)
+        X_train = poly.fit_transform(x_train)
+        X_train_scalar = np.mean(X_train, axis = 0)
+        y_train_scalar = np.mean(y_train)
 
-        # X_centred_train = X_train - X_train_scalar
-        # y_centred_train = y_train - y_train_scalar
+        X_centred_train = X_train - X_train_scalar
+        y_centred_train = y_train - y_train_scalar
 
         # Test: Centring and design matrix
-        X_test = poly.fit_transform(x_test[:, np.newaxis])
-        # X_test_scalar = np.mean(X_test, axis = 0)
-        # y_test_scalar = np.mean(y_test)
+        X_test = poly.fit_transform(x_test)
 
-        # X_centred_test = X_test - X_test_scalar
-        # y_centred_test = y_test - y_test_scalar
+        X_centred_test = X_test - X_train_scalar # Trent på trenings skaleringen
+        y_centred_test = y_test - y_train_scalar
 
         # Fitting on train data, and predicting on test data:
-        model.fit(X_train, y_train[:, np.newaxis])
-        y_pred = model.predict(X_test)
+        model.fit(X_centred_train, y_centred_train)
+        y_centred_pred = model.predict(X_centred_test)
 
+        import ipdb;ipdb.set_trace()
+        scaler = StandardScaler(with_std = False)
+        scaler.fit(X_train)
+        X_centred_train_ = scaler.transform(X_train)
+        
         # Scores: mse
-        scores_KFold[i] = np.sum((y_pred - y_test[:, np.newaxis])**2)/np.size(y_pred)
-
+        scores_KFold[i] = np.sum((y_centred_pred - y_centred_test)**2)/np.size(y_centred_pred)      
 
     scores_KFold_mean = np.mean(scores_KFold)
-
-    linreg = LinearRegression(fit_intercept = False)
-    poly = PolynomialFeatures(degree)
-    X = poly.fit_transform(x_shuffled[:, np.newaxis])
-    check_scores = -cross_val_score(linreg, X, y_shuffled[:, np.newaxis], scoring="neg_mean_squared_error", cv=kfold)
-
-    # x_centred = x - np.mean(x, axis = 0)
-    # y_centred = y - np.mean(y)
-    # X_centred = poly.fit_transform(x_centred)
-    # check_scores = -cross_val_score(model, X_centred, y_centred, scoring = "neg_mean_squared_error", cv = kfold)
-    return scores_KFold, check_scores
+    return scores_KFold_mean
 
 
 def main():
@@ -88,17 +79,9 @@ def main():
     x_, y_ = np.meshgrid(x, y)
     xy = np.stack((np.ravel(x_),np.ravel(y_)), axis = -1) # formatting needed to set up the design matrix
     z = FrankeFunction(x_, y_)
-    np.random.seed(1234)
 
-    nsamples = 100
-    x = np.random.randn(nsamples)
-    y = 3*x**2 + np.random.randn(nsamples)
-
-    score, check = kFold_linreg(x, y, degree = 5, lin_model = LinearRegression)
-
-    print("My code    |  Sklearn code")
-    for s, c in zip(score, check):
-        print(f"{s:0.7f}  |  {c:0.7f} | rel: {abs(s - c)/c * 100:0.8f} %")
+    score = kFold_linreg(xy, z.flatten(), k = 5, degree = 5, lin_model = LinearRegression)
+    print(f"The calculated mean value from the 5-fold MSE: {score:0.7f}")
 
 
 if __name__ == "__main__":
