@@ -1,4 +1,5 @@
 import numpy as np
+import random
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
@@ -24,14 +25,13 @@ def add_noise(data, std):
 
 ### Set up dataset ###
 n = 101 # number of points along one axis, total number of points will be n^2
-start_value = 0
-stop_value = 1
-x = np.sort(np.random.rand(n, 1), axis = 0)
-y = np.sort(np.random.rand(n, 1), axis = 0)
+rng = np.random.default_rng(seed = 25) # seed to ensure same numbers over multiple runs
+x = np.sort(rng.random((n, 1)), axis = 0)
+y = np.sort(rng.random((n, 1)), axis = 0)
 x_, y_ = np.meshgrid(x, y)
 xy = np.stack((np.ravel(x_),np.ravel(y_)), axis = -1) # formatting needed to set up the design matrix
-# z = add_noise(FrankeFunction(x_, y_), 0.1)
-z = FrankeFunction(x_, y_)
+z = add_noise(FrankeFunction(x_, y_), 0.1)
+# z = FrankeFunction(x_, y_)
 
 # Plot Franke function
 fig, ax = plt.subplots(subplot_kw = {"projection": "3d"})
@@ -51,6 +51,8 @@ model = reg_class.regression_class(xy, z.flatten(), n_deg_max, lmbda)
 model.ols_regression()
 model.ridge_regression()
 model.lasso_regression()
+
+
 
 ### Plot prediction
 pol_degree = 5
@@ -97,7 +99,7 @@ for pol_degree in range(1,n_deg_max+1): # for each polynomial degree
 
 
 ### Compare results from our own code and scikit-learn ###
-tol = 1e-6 # tolerance limit
+tol = 1e-7 # tolerance limit
 
 # Test for OLS
 beta_test = True
@@ -135,14 +137,3 @@ for i in range(len(beta_ridge)):
 print("\n--- TEST RIDGE ---")
 print(f"MSE_train: {mse_test}")
 print(f"Beta: {beta_test}\n")
-
-print(model.find_optimal_lambda("ridge"))
-print(model.find_optimal_lambda("lasso"))
-
-'''
-If you want to access items from the class after doing regression, the index is as following:
-Dictionaries ols, ridge and lasso with keys "beta", "mse_train", "mse_test", "r2_train", "r2_test".
-dict[key][i] gives the beta coefficients/MSE/R^2 for polynomial degree i+1
-For Ridge and Lasso this gives a list with values for each lambda, so
-dict[key][i][j] gives the beta coefficients/MSE/R^2 for polynomial degree i+1 and lmbda[j]
-'''

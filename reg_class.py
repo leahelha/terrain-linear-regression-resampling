@@ -6,7 +6,13 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 
 class regression_class:
-    '''Does OLS, Ridge and Lasso regression with a polynomial model of degree up to n_deg_max.'''
+    '''Does OLS, Ridge and Lasso regression with a polynomial model of degree up to n_deg_max.
+    
+    If you want to access items from the class after doing regression, results are stored in the following way:
+    - Dictionaries ols, ridge and lasso with keys "beta", "mse_train", "mse_test", "r2_train", "r2_test".
+    - dict[key][i] gives the beta coefficients/MSE/R^2 for polynomial degree i+1.
+    - For Ridge and Lasso this gives a list with values for each lambda, so
+    dict[key][i][j] gives the beta coefficients/MSE/R^2 for polynomial degree i+1 and lmbda[j].'''
 
     def __init__(self, x, y, n_deg_max, lmbda):
         self.x = x
@@ -61,34 +67,46 @@ class regression_class:
         '''Plots MSE, R2 score and beta values for OLS regression and saves to file.'''
         self.plot_ols(self.ols["mse_train"], self.ols["mse_test"], "Mean Squared Error", "mse_ols")
         self.plot_ols(self.ols["r2_train"], self.ols["r2_test"], f"$R^2$", "r2_ols")
-        self.plot_beta_ols(self.ols["beta"], "beta_ols")
+        # self.plot_beta_ols(self.ols["beta"], "beta_ols")
     
     def plot_ridge_results(self):
         '''Plots MSE, R2 score and beta values for Ridge regression and saves to file.'''
         self.plot_ridge_or_lasso(self.ridge["mse_train"], self.ridge["mse_test"], "Mean Squared Error", "mse_ridge")
         self.plot_ridge_or_lasso(self.ridge["r2_train"], self.ridge["r2_test"], f"$R^2$", "r2_ridge")
-        self.plot_beta_ridge_or_lasso(self.ridge["beta"], self.lmbda, "beta_ridge")
+        # self.plot_beta_ridge_or_lasso(self.ridge["beta"], self.lmbda, "beta_ridge")
 
     def plot_lasso_results(self):
         '''Plots MSE, R2 score and beta values for Lasso regression and saves to file.'''
         self.plot_ridge_or_lasso(self.lasso["mse_train"], self.lasso["mse_test"], "Mean Squared Error", "mse_lasso")
         self.plot_ridge_or_lasso(self.lasso["r2_train"], self.lasso["r2_test"], f"$R^2$", "r2_lasso")
-        self.plot_beta_ridge_or_lasso(self.lasso["beta"], self.lmbda, "beta_lasso")
+        # self.plot_beta_ridge_or_lasso(self.lasso["beta"], self.lmbda, "beta_lasso")
 
     def predict_ols(self, pol_degree):
+        '''Makes a prediction with OLS model of polynomial degree pol_deg, using all X data'''
+        # Pick out relevant part of design matrix for this pol_degree
         N = int((pol_degree+1)*(pol_degree+2)/2 - 1)
         X = (self.X - self.X_scaler)[:, 0:N]
-        return X @ self.ols["beta"][pol_degree-1] + self.y_scaler
+
+        prediction = X @ self.ols["beta"][pol_degree-1] + self.y_scaler
+        return prediction
 
     def predict_ridge(self, pol_degree, lmbda_n):
+        '''Makes a prediction with Ridge model of polynomial degree pol_deg, using all X data'''
+        # Pick out relevant part of design matrix for this pol_degree
         N = int((pol_degree+1)*(pol_degree+2)/2 - 1)
         X = (self.X - self.X_scaler)[:, 0:N]
-        return X @ self.ridge["beta"][pol_degree-1][lmbda_n] + self.y_scaler
+
+        prediction = X @ self.ridge["beta"][pol_degree-1][lmbda_n] + self.y_scaler
+        return prediction
 
     def predict_lasso(self, pol_degree, lmbda_n):
+        '''Makes a prediction with Lasso model of polynomial degree pol_deg, using all X data'''
+        # Pick out relevant part of design matrix for this pol_degree
         N = int((pol_degree+1)*(pol_degree+2)/2 - 1)
         X = (self.X - self.X_scaler)[:, 0:N]
-        return X @ self.lasso["beta"][pol_degree-1][lmbda_n] + self.y_scaler
+
+        prediction = X @ self.lasso["beta"][pol_degree-1][lmbda_n] + self.y_scaler
+        return prediction
 
     def plot_ols(self, train_results, test_results, ylabel, name):
         '''Plots either MSE or R2 score for train and test data from OLS and saves to file.'''
@@ -244,6 +262,7 @@ class regression_class:
     def make_design_matrix(self):
         '''Makes design matrix and splits into training and test data'''
         self.X = PolynomialFeatures(self.n_deg_max, include_bias = False).fit_transform(self.x) # without intercept
+        # self.X = PolynomialFeatures(self.n_deg_max, include_bias = True).fit_transform(self.x) # without intercept
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size = 0.2, random_state = 3) # random_state gives same partition across multiple function calls
 
     def scale_design_matrix(self):
@@ -264,12 +283,14 @@ class regression_class:
         else:
             print("Must specify 'ridge' or 'lasso' when calling optimal_lambda.")
         
+        # List to store optimal lambda and corresponding MSE for each polynomial degree
         optimaL_values = [0]*self.n_deg_max
 
-        for i in range(self.n_deg_max):
+        for i in range(self.n_deg_max): # for each polynomial degree
             min_index = 0
             min_el = mse_values[i][0]
 
+            # Find lowest MSE and corresponding lambda
             for j in range(len(self.lmbda)):
                 if (mse_values[i][j] < min_el):
                     min_el = mse_values[i][j]
@@ -286,21 +307,20 @@ def FrankeFunction(x,y):
     term4 = -0.2*np.exp(-(9*x-4)**2 - (9*y-7)**2)
     return term1 + term2 + term3 + term4
 
-def add_noise(data):
-    '''Adds noise from a normal distribution N(0,1) to an array of any shape.'''
-    noise_matrix = np.random.normal(0, 1, data.shape)
+def add_noise(data, std):
+    '''Adds noise from a normal distribution N(0,std^2) to an array of any shape.'''
+    noise_matrix = np.random.normal(0, std, data.shape)
     return data + noise_matrix
 
 if (__name__ == "__main__"):
     # Set up dataset
     n = 11 # number of points along one axis, total number of points will be n^2
-    start_value = 0
-    stop_value = 1
-    x = np.sort(np.random.rand(n, 1), axis = 0)
-    y = np.sort(np.random.rand(n, 1), axis = 0)
+    rng = np.random.default_rng(seed = 25) # seed to ensure same numbers over multiple runs
+    x = np.sort(rng.random((n, 1)), axis = 0)
+    y = np.sort(rng.random((n, 1)), axis = 0)
     x_, y_ = np.meshgrid(x, y)
     xy = np.stack((np.ravel(x_),np.ravel(y_)), axis = -1) # formatting needed to set up the design matrix
-    # z = add_noise(FrankeFunction(x_, y_))
+    # z = add_noise(FrankeFunction(x_, y_), 0.1)
     z = FrankeFunction(x_, y_)
 
     # Plot Franke function
