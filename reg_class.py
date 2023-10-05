@@ -73,30 +73,7 @@ class regression_class:
 
         prediction = X @ self.lasso["beta"][pol_degree-1][lmbda_n] + self.y_scaler
         return prediction
-
-    def plot_ols(self, train_results, test_results, ylabel, name):
-        '''Plots either MSE or R2 score for train and test data from OLS and saves to file.'''
-        plt.figure(figsize = (6,4))
-        plt.plot(range(1, len(train_results)+1), train_results, label = "Training data")
-        plt.plot(range(1, len(train_results)+1), test_results, label = "Test data")
-        plt.xlabel("Polynomial degree")
-        plt.ylabel(ylabel)
-        plt.legend()
-        plt.savefig(f"plots/{name}.pdf")
     
-    def plot_ridge_or_lasso(self, train_results, test_results, ylabel, name):
-        '''Plots either MSE or R2 score for train and test data from Ridge or Lasso regression and saves to file.'''
-        for i in range(self.n_deg_max): # one subplot for each polynomial degree
-            plt.figure()
-            plt.semilogx(self.lmbda, train_results[i], label = "Training data")
-            plt.semilogx(self.lmbda, test_results[i], label = "Test data")
-
-            plt.text(1, 1, f"Polynomial of order {i+1}")
-            plt.xlabel("$\lambda$")
-            plt.ylabel(ylabel)
-            plt.legend()
-            plt.savefig(f"plots/{name}_{i+1}.pdf")
-            plt.close()
     def beta_ols(self, X, y):
         '''Given the design matrix X and the output y, calculates the coefficients beta using OLS.'''
         beta = np.linalg.inv(X.T @ X) @ X.T @ y
@@ -201,7 +178,6 @@ class regression_class:
 
         return beta, mse_train, mse_test, r2_train, r2_test
 
-    
     def ols_regression(self):
         '''Calculates OLS for polynomials of degree 1 to n_deg_max.'''
         for i in range(self.n_deg_max):
@@ -257,7 +233,6 @@ class regression_class:
             optimaL_values[i] = (self.lmbda[min_index], min_el)
         return optimaL_values
 
-
     def plot_ols(self, train_results, test_results, ylabel, name):
         '''Plots either MSE or R2 score for train and test data from OLS and saves to file.'''
         plt.figure(figsize = (6,4))
@@ -268,22 +243,19 @@ class regression_class:
         plt.legend()
         plt.savefig(f"plots/{name}.pdf")
 
-    
     def plot_ridge_or_lasso(self, train_results, test_results, ylabel, name):
         '''Plots either MSE or R2 score for train and test data from Ridge or Lasso regression and saves to file.'''
-        plt.figure(figsize = (6,12))
         for i in range(self.n_deg_max): # one subplot for each polynomial degree
-            plt.subplot(self.n_deg_max, 1, i+1)
-
+            plt.figure()
             plt.semilogx(self.lmbda, train_results[i], label = "Training data")
             plt.semilogx(self.lmbda, test_results[i], label = "Test data")
 
-            plt.title(f"Polynomial of order {i+1}")
+            plt.text(1, 1, f"Polynomial of order {i+1}")
             plt.xlabel("$\lambda$")
             plt.ylabel(ylabel)
             plt.legend()
-        plt.tight_layout()
-        plt.savefig(f"plots/{name}.pdf")
+            plt.savefig(f"plots/{name}_{i+1}.pdf")
+            plt.close()
 
     def plot_beta_ols(self, beta, name, degrees = None):
         '''Plots beta values with standard deviation from OLS regression.'''
@@ -296,8 +268,8 @@ class regression_class:
             indicies = range(len(beta[degree - 1]))
             plt.bar(indicies, beta[degree - 1], label = f"degree = {degree}")
         plt.legend()
-        plt.show()
-        # plt.savefig(f"plots/{name}.pdf")
+        # plt.show()
+        plt.savefig(f"plots/{name}.pdf")
 
     def plot_beta_ridge_or_lasso(self, beta, lmbda, name):
         '''Plots beta values with standard deviation from Ridge or Lasso regression.'''
@@ -368,13 +340,13 @@ def main():
 
     # Do regression
     model.ols_regression()
-    # model.ridge_regression()
-    # model.lasso_regression()
+    model.ridge_regression()
+    model.lasso_regression()
 
     # Plot results
     model.plot_ols_results(name = "testing")
-    # model.plot_ridge_results()
-    # model.plot_lasso_results()
+    model.plot_ridge_results()
+    model.plot_lasso_results()
 
 if __name__ == "__main__":
     main()
