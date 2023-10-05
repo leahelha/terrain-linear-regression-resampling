@@ -319,7 +319,7 @@ def add_noise(data, std):
 
 def main():
     # Set up dataset
-    n = 11 # number of points along one axis, total number of points will be n^2
+    n = 101 # number of points along one axis, total number of points will be n^2
     rng = np.random.default_rng(seed = 25) # seed to ensure same numbers over multiple runs
     x = np.sort(rng.random((n, 1)), axis = 0)
     y = np.sort(rng.random((n, 1)), axis = 0)
