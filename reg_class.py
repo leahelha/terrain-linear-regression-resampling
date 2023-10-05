@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.preprocessing import PolynomialFeatures
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
 from sklearn.linear_model import Lasso, Ridge, LinearRegression
 from tqdm import trange
 import matplotlib.pyplot as plt
@@ -38,7 +38,6 @@ class regression_class:
     def make_design_matrix(self):
         '''Makes design matrix and splits into training and test data'''
         self.X = PolynomialFeatures(self.n_deg_max, include_bias = False).fit_transform(self.x) # without intercept
-        # self.X = PolynomialFeatures(self.n_deg_max, include_bias = True).fit_transform(self.x) # without intercept
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size = 0.2, random_state = 3) # random_state gives same partition across multiple function calls
 
     def scale_design_matrix(self):
@@ -180,8 +179,7 @@ class regression_class:
 
         return beta, mse_train, mse_test, r2_train, r2_test
 
-
-    def kFold_linreg(pol_degree, lin_model, k = 5, lmbda = None):
+    def kFold_linreg(self, pol_degree, lin_model, k = 5, lmbda = None):
         '''Calculate the kfold cross validation for a specific polynomial degree, pol_degree, and a specific number of folds, k.'''
         poly = PolynomialFeatures(pol_degree, include_bias = False) # Skal være False hvis sentrerer
         if lmbda is None:
@@ -233,26 +231,24 @@ class regression_class:
         scores_KFold_mean = np.mean(scores_KFold)
         return scores_KFold_mean
 
-
     def ols_kfold(self):
         for i in trange(self.n_deg_max):
             ols_score = self.kFold_linreg(i + 1, LinearRegression)
             self.ols["mse_kfold"][i] = ols_score
     
     def ridge_kfold(self):
-        for i in trange(len(self.n_deg_max)):
-            ridge_score = np.zeros(self.lmbda)
+        for i in trange(self.n_deg_max):
+            ridge_score = [0]*len(self.lmbda)
             for j in range(len(self.lmbda)):
-                rigde_score[j] = self.kFold_linreg(i + 1, Ridge, lmbda=lmbda[j])
-            self.ridge["mse_kfold"][i] = rigde_score
+                ridge_score[j] = self.kFold_linreg(i + 1, Ridge, lmbda=self.lmbda[j])
+            self.ridge["mse_kfold"][i] = ridge_score
     
     def lasso_kfold(self):
-        for i in trange(len(self.n_deg_max)):
-            lasso_score = np.zeros(self.lmbda)
+        for i in trange(self.n_deg_max):
+            lasso_score = [0]*len(self.lmbda)
             for j in range(len(self.lmbda)):
-                lasso_score[j] = self.kFold_linreg(i + 1, Lasso, lmbda=lmbda[j])
+                lasso_score[j] = self.kFold_linreg(i + 1, Lasso, lmbda=self.lmbda[j])
             self.lasso["mse_kfold"][i] = lasso_score
-
 
     def ols_regression(self):
         '''Calculates OLS for polynomials of degree 1 to n_deg_max.'''
@@ -292,7 +288,7 @@ class regression_class:
         elif type == "lasso":
             mse_values = self.lasso["mse_test"]
         else:
-            print("Must specify 'ridge' or 'lasso' when calling optimal_lambda.")
+            print("Must specify 'ridge' or 'lasso' when calling find_optimal_lambda.")
         
         # List to store optimal lambda and corresponding MSE for each polynomial degree
         optimaL_values = [0]*self.n_deg_max
@@ -308,7 +304,31 @@ class regression_class:
                     min_index = j
             optimaL_values[i] = (self.lmbda[min_index], min_el)
         return optimaL_values
+    
+    def find_optimal_lambda_kfold(self, type):
+        '''For either Ridge or Lasso regression, finds and returns lambda value that gives lowest MSE_test and corresponding MSE_test for each polynomial degree.'''
+        
+        if type == "ridge":
+            mse_kfold = self.ridge["mse_kfold"]
+        elif type == "lasso":
+            mse_kfold = self.lasso["mse_kfold"]
+        else:
+            print("Must specify 'ridge' or 'lasso' when calling find_optimal_model.")
+        
+        # List to store optimal lambda and corresponding MSE for each polynomial degree
+        optimaL_values = [0]*self.n_deg_max
+        
+        for i in range(self.n_deg_max): # for each polynomial degree
+            min_index = 0
+            min_el = mse_kfold[i][0]
 
+            # Find lowest MSE and corresponding lambda
+            for j in range(len(self.lmbda)):
+                if (mse_kfold[i][j] < min_el):
+                    min_el = mse_kfold[i][j]
+                    min_index = j
+            optimaL_values[i] = (self.lmbda[min_index], min_el)
+        return optimaL_values
 
     def plot_ols(self, train_results, test_results, ylabel, name):
         '''Plots either MSE or R2 score for train and test data from OLS and saves to file.'''
@@ -346,8 +366,7 @@ class regression_class:
             plt.bar(indicies, beta[degree - 1], label = f"degree = {degree}")
         plt.legend()
         plt.savefig(f"plots/{name}.pdf")
-        
-        
+              
     def plot_beta_ridge_or_lasso(self, beta, lmbda, name):
         '''Plots beta values with standard deviation from Ridge or Lasso regression.'''
         labels = ["$x$", "$y$", "$x^2$", "$xy$", "$y^2$", "$x^3$", "$x^2y$", "$xy^2$", "$y^3$", "$x^4$", "$x^3y$",
@@ -419,11 +438,14 @@ def main():
     model.ols_regression()
     model.ridge_regression()
     model.lasso_regression()
+    model.ols_kfold()
+    model.ridge_kfold()
+    model.lasso_kfold()
 
-    # Plot results
-    model.plot_ols_results()
-    model.plot_ridge_results()
-    model.plot_lasso_results()
+    # # Plot results
+    # model.plot_ols_results()
+    # model.plot_ridge_results()
+    # model.plot_lasso_results()
 
 if __name__ == "__main__":
     main()
