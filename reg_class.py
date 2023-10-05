@@ -1,9 +1,11 @@
 import numpy as np
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import Lasso
+from sklearn.linear_model import Lasso, Ridge, LinearRegression
+from tqdm import trange
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from pathlib import Path
 
 class regression_class:
     '''Does OLS, Ridge and Lasso regression with a polynomial model of degree up to n_deg_max.
@@ -21,7 +23,7 @@ class regression_class:
         self.lmbda = lmbda
 
         # Initialise dictionaries to store results
-        keys = ["beta", "mse_train", "mse_test", "r2_train", "r2_test"]
+        keys = ["beta", "mse_train", "mse_test", "r2_train", "r2_test", "mse_kfold"]
         self.ols = dict.fromkeys(keys)
         self.ridge = dict.fromkeys(keys)
         self.lasso = dict.fromkeys(keys)
@@ -201,10 +203,84 @@ class regression_class:
 
         return beta, mse_train, mse_test, r2_train, r2_test
 
+
+    def kFold_linreg(pol_degree, lin_model, k = 5, lmbda=None):
+        '''Calculate the kfold cross validation for a specific polynomial degree, pol_degree, and a specific number of folds, k.'''
+        poly = PolynomialFeatures(pol_degree, include_bias = False) # Skal være False hvis sentrerer
+        if lmbda is None:
+            model = lin_model(fit_intercept = False) # Forventer sentrert data
+        else:
+            model = lin_model(alpha = lmbda, fit_intercept = False) # Forventer sentrert data
+        x = self.x
+        y = self.y
+
+        indicies = np.arange(len(x))
+        np.random.shuffle(indicies)
+
+        import ipdb;ipdb.set_trace()
+        x_shuffled = x[indicies]
+        y_shuffled = y[indicies]
+
+        # Initialize a KFold instance:
+        kfold = KFold(n_splits = k)
+        scores_KFold = np.zeros(k)
+
+        # Perform the cross-validation to estimate MSE:
+        for i, (train_inds, test_inds) in enumerate(kfold.split(x_shuffled)):
+            x_train = x_shuffled[train_inds]
+            y_train = y_shuffled[train_inds]
+
+            x_test = x_shuffled[test_inds]
+            y_test = y_shuffled[test_inds]
+
+            # Train: Centring and design matrix
+            X_train = poly.fit_transform(x_train)
+            X_train_scalar = np.mean(X_train, axis = 0)
+            y_train_scalar = np.mean(y_train)
+
+            X_centred_train = X_train - X_train_scalar
+            y_centred_train = y_train - y_train_scalar
+
+            # Test: Centring and design matrix
+            X_test = poly.fit_transform(x_test)
+
+            X_centred_test = X_test - X_train_scalar # Trent på trenings skaleringen
+            y_centred_test = y_test - y_train_scalar
+
+            # Fitting on train data, and predicting on test data:
+            model.fit(X_centred_train, y_centred_train)
+            y_centred_pred = model.predict(X_centred_test)
+            
+            # Scores: mse
+            scores_KFold[i] = np.sum((y_centred_pred - y_centred_test)**2)/np.size(y_centred_pred)      
+
+        scores_KFold_mean = np.mean(scores_KFold)
+        return scores_KFold_mean
+
+
+    def ols_kfold(self):
+        for i in trange(self.n_deg_max):
+            ols_score = self.kFold_linreg(i + 1, LinearRegression)
+            self.ols["mse_kfold"][i] = ols_score
+    
+    def ridge_kfold(self):
+        for i in trange(len(self.n_deg_max)):
+            ridge_score = np.zeros(self.lmbda)
+            for j in range(len(self.lmbda)):
+                rigde_score[j] = self.kFold_linreg(i + 1, Ridge, lmbda=lmbda[j])
+            self.ridge["mse_kfold"][i] = rigde_score
+    
+    def lasso_kfold(self):
+        for i in trange(len(self.n_deg_max)):
+            lasso_score = np.zeros(self.lmbda)
+            for j in range(len(self.lmbda)):
+                lasso_score[j] = self.kFold_linreg(i + 1, Lasso, lmbda=lmbda[j])
+            self.lasso["mse_kfold"][i] = lasso_score
+
     
     def ols_regression(self):
         '''Calculates OLS for polynomials of degree 1 to n_deg_max.'''
-        for i in range(self.n_deg_max):
+        for i in trange(self.n_deg_max):
             ols_results = self.fit_predict_ols(i+1)
             self.ols["beta"][i] = ols_results[0]
             self.ols["mse_train"][i] = ols_results[1]
@@ -214,7 +290,7 @@ class regression_class:
 
     def ridge_regression(self):
         '''Calculates Ridge regression for polynomials of degree 1 to n_deg_max.'''
-        for i in range(self.n_deg_max):
+        for i in trange(self.n_deg_max):
             ridge_results = self.fit_predict_ridge(i+1)
             self.ridge["beta"][i] = ridge_results[0]
             self.ridge["mse_train"][i] = ridge_results[1]
@@ -224,7 +300,7 @@ class regression_class:
     
     def lasso_regression(self):
         '''Calculates Lasso regression for polynomials of degree 1 to n_deg_max.'''
-        for i in range(self.n_deg_max):
+        for i in trange(self.n_deg_max):
             lasso_results = self.fit_predict_lasso(i+1)
             self.lasso["beta"][i] = lasso_results[0]
             self.lasso["mse_train"][i] = lasso_results[1]
@@ -258,6 +334,7 @@ class regression_class:
         return optimaL_values
 
 
+
     def plot_ols(self, train_results, test_results, ylabel, name):
         '''Plots either MSE or R2 score for train and test data from OLS and saves to file.'''
         plt.figure(figsize = (6,4))
@@ -272,7 +349,7 @@ class regression_class:
     def plot_ridge_or_lasso(self, train_results, test_results, ylabel, name):
         '''Plots either MSE or R2 score for train and test data from Ridge or Lasso regression and saves to file.'''
         plt.figure(figsize = (6,12))
-        for i in range(self.n_deg_max): # one subplot for each polynomial degree
+        for i in trange(self.n_deg_max): # one subplot for each polynomial degree
             plt.subplot(self.n_deg_max, 1, i+1)
 
             plt.semilogx(self.lmbda, train_results[i], label = "Training data")
@@ -296,14 +373,14 @@ class regression_class:
             indicies = range(len(beta[degree - 1]))
             plt.bar(indicies, beta[degree - 1], label = f"degree = {degree}")
         plt.legend()
+        plt.savefig(f"plots/{name}.pdf")
         plt.show()
-        # plt.savefig(f"plots/{name}.pdf")
 
     def plot_beta_ridge_or_lasso(self, beta, lmbda, name):
         '''Plots beta values with standard deviation from Ridge or Lasso regression.'''
         labels = ["$x$", "$y$", "$x^2$", "$xy$", "$y^2$", "$x^3$", "$x^2y$", "$xy^2$", "$y^3$", "$x^4$", "$x^3y$",
                 "$x^2y^2$", "$xy^3$", "$y^4$", "$x^5$", "$x^4y$", "$x^3y^2$", "$x^2y^3$", "$xy^4$", "$y^5$"]
-        for i in range(len(lmbda)):
+        for i in trange(len(lmbda)): # TODO: Ikke subplots
             plt.figure(figsize = (15,5))
             for j in range(len(beta)):
                 plt.subplot(1, len(beta), j+1)
@@ -314,8 +391,8 @@ class regression_class:
 
     def plot_ols_results(self, name = "beta_ols"):
         '''Plots MSE, R2 score and beta values for OLS regression and saves to file.'''
-        # self.plot_ols(self.ols["mse_train"], self.ols["mse_test"], "Mean Squared Error", "mse_ols")
-        # self.plot_ols(self.ols["r2_train"], self.ols["r2_test"], f"$R^2$", "r2_ols")
+        self.plot_ols(self.ols["mse_train"], self.ols["mse_test"], "Mean Squared Error", "mse_ols")
+        self.plot_ols(self.ols["r2_train"], self.ols["r2_test"], f"$R^2$", "r2_ols")
         self.plot_beta_ols(self.ols["beta"], name)
     
     def plot_ridge_results(self):
@@ -368,13 +445,13 @@ def main():
 
     # Do regression
     model.ols_regression()
-    # model.ridge_regression()
-    # model.lasso_regression()
+    model.ridge_regression()
+    model.lasso_regression()
 
     # Plot results
-    model.plot_ols_results(name = "testing")
-    # model.plot_ridge_results()
-    # model.plot_lasso_results()
+    model.plot_ols_results()
+    model.plot_ridge_results()
+    model.plot_lasso_results()
 
 if __name__ == "__main__":
     main()

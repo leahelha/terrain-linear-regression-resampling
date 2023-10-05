@@ -45,19 +45,19 @@ def kFold_linreg(x, y, degree, lin_model, lmbda=None):
 
         # Train: Centring and design matrix
         X_train = poly.fit_transform(x_train)
-        # X_train_scalar = np.mean(X_train, axis = 0)
-        # y_train_scalar = np.mean(y_train)
+        X_train_scalar = np.mean(X_train, axis = 0)
+        y_train_scalar = np.mean(y_train)
 
-        # X_centred_train = X_train - X_train_scalar
-        # y_centred_train = y_train - y_train_scalar
+        X_centred_train = X_train - X_train_scalar
+        y_centred_train = y_train - y_train_scalar
 
         # Test: Centring and design matrix
         X_test = poly.fit_transform(x_test)
-        # X_test_scalar = np.mean(X_test, axis = 0)
-        # y_test_scalar = np.mean(y_test)
+        X_test_scalar = np.mean(X_test, axis = 0)
+        y_test_scalar = np.mean(y_test)
 
-        # X_centred_test = X_test - X_test_scalar
-        # y_centred_test = y_test - y_test_scalar
+        X_centred_test = X_test - X_test_scalar
+        y_centred_test = y_test - y_test_scalar
 
         # Fitting on train data, and predicting on test data:
         model.fit(X_train, y_train)
@@ -66,20 +66,8 @@ def kFold_linreg(x, y, degree, lin_model, lmbda=None):
         # Scores: mse
         scores_KFold[i] = np.sum((y_pred - y_test)**2)/np.size(y_pred)
 
-
     scores_KFold_mean = np.mean(scores_KFold)
-
-    poly = PolynomialFeatures(degree, include_bias = True) # Funker når det er True???
-    linreg = LinearRegression(fit_intercept = False) # Når den er False så funker det???
-    X = poly.fit_transform(x_shuffled)
-    check_scores = -cross_val_score(linreg, X, y_shuffled, scoring="neg_mean_squared_error", cv=kfold)
-
-    # x_centred = x - np.mean(x, axis = 0)
-    # y_centred = y - np.mean(y)
-    # X_centred = poly.fit_transform(x_centred)
-    # check_scores = -cross_val_score(model, X_centred, y_centred, scoring = "neg_mean_squared_error", cv = kfold)
-    return scores_KFold, check_scores
-    # return scores_KFold_mean
+    return scores_KFold_mean
 
 def main():
     # Set up dataset

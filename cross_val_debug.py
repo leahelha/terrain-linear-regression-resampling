@@ -58,11 +58,6 @@ def kFold_linreg(x, y, k, degree, lin_model, lmbda=None):
         # Fitting on train data, and predicting on test data:
         model.fit(X_centred_train, y_centred_train)
         y_centred_pred = model.predict(X_centred_test)
-
-        import ipdb;ipdb.set_trace()
-        scaler = StandardScaler(with_std = False)
-        scaler.fit(X_train)
-        X_centred_train_ = scaler.transform(X_train)
         
         # Scores: mse
         scores_KFold[i] = np.sum((y_centred_pred - y_centred_test)**2)/np.size(y_centred_pred)      
