@@ -75,30 +75,7 @@ class regression_class:
 
         prediction = X @ self.lasso["beta"][pol_degree-1][lmbda_n] + self.y_scaler
         return prediction
-
-    def plot_ols(self, train_results, test_results, ylabel, name):
-        '''Plots either MSE or R2 score for train and test data from OLS and saves to file.'''
-        plt.figure(figsize = (6,4))
-        plt.plot(range(1, len(train_results)+1), train_results, label = "Training data")
-        plt.plot(range(1, len(train_results)+1), test_results, label = "Test data")
-        plt.xlabel("Polynomial degree")
-        plt.ylabel(ylabel)
-        plt.legend()
-        plt.savefig(f"plots/{name}.pdf")
     
-    def plot_ridge_or_lasso(self, train_results, test_results, ylabel, name):
-        '''Plots either MSE or R2 score for train and test data from Ridge or Lasso regression and saves to file.'''
-        for i in range(self.n_deg_max): # one subplot for each polynomial degree
-            plt.figure()
-            plt.semilogx(self.lmbda, train_results[i], label = "Training data")
-            plt.semilogx(self.lmbda, test_results[i], label = "Test data")
-
-            plt.text(1, 1, f"Polynomial of order {i+1}")
-            plt.xlabel("$\lambda$")
-            plt.ylabel(ylabel)
-            plt.legend()
-            plt.savefig(f"plots/{name}_{i+1}.pdf")
-            plt.close()
     def beta_ols(self, X, y):
         '''Given the design matrix X and the output y, calculates the coefficients beta using OLS.'''
         beta = np.linalg.inv(X.T @ X) @ X.T @ y
@@ -204,7 +181,7 @@ class regression_class:
         return beta, mse_train, mse_test, r2_train, r2_test
 
 
-    def kFold_linreg(pol_degree, lin_model, k = 5, lmbda=None):
+    def kFold_linreg(pol_degree, lin_model, k = 5, lmbda = None):
         '''Calculate the kfold cross validation for a specific polynomial degree, pol_degree, and a specific number of folds, k.'''
         poly = PolynomialFeatures(pol_degree, include_bias = False) # Skal være False hvis sentrerer
         if lmbda is None:
@@ -217,7 +194,6 @@ class regression_class:
         indicies = np.arange(len(x))
         np.random.shuffle(indicies)
 
-        import ipdb;ipdb.set_trace()
         x_shuffled = x[indicies]
         y_shuffled = y[indicies]
 
@@ -277,7 +253,7 @@ class regression_class:
                 lasso_score[j] = self.kFold_linreg(i + 1, Lasso, lmbda=lmbda[j])
             self.lasso["mse_kfold"][i] = lasso_score
 
-    
+
     def ols_regression(self):
         '''Calculates OLS for polynomials of degree 1 to n_deg_max.'''
         for i in trange(self.n_deg_max):
@@ -334,7 +310,6 @@ class regression_class:
         return optimaL_values
 
 
-
     def plot_ols(self, train_results, test_results, ylabel, name):
         '''Plots either MSE or R2 score for train and test data from OLS and saves to file.'''
         plt.figure(figsize = (6,4))
@@ -345,22 +320,19 @@ class regression_class:
         plt.legend()
         plt.savefig(f"plots/{name}.pdf")
 
-    
     def plot_ridge_or_lasso(self, train_results, test_results, ylabel, name):
         '''Plots either MSE or R2 score for train and test data from Ridge or Lasso regression and saves to file.'''
-        plt.figure(figsize = (6,12))
-        for i in trange(self.n_deg_max): # one subplot for each polynomial degree
-            plt.subplot(self.n_deg_max, 1, i+1)
-
+        for i in range(self.n_deg_max): # one subplot for each polynomial degree
+            plt.figure()
             plt.semilogx(self.lmbda, train_results[i], label = "Training data")
             plt.semilogx(self.lmbda, test_results[i], label = "Test data")
 
-            plt.title(f"Polynomial of order {i+1}")
+            plt.text(1, 1, f"Polynomial of order {i+1}")
             plt.xlabel("$\lambda$")
             plt.ylabel(ylabel)
             plt.legend()
-        plt.tight_layout()
-        plt.savefig(f"plots/{name}.pdf")
+            plt.savefig(f"plots/{name}_{i+1}.pdf")
+            plt.close()
 
     def plot_beta_ols(self, beta, name, degrees = None):
         '''Plots beta values with standard deviation from OLS regression.'''
@@ -374,8 +346,8 @@ class regression_class:
             plt.bar(indicies, beta[degree - 1], label = f"degree = {degree}")
         plt.legend()
         plt.savefig(f"plots/{name}.pdf")
-        plt.show()
-
+        
+        
     def plot_beta_ridge_or_lasso(self, beta, lmbda, name):
         '''Plots beta values with standard deviation from Ridge or Lasso regression.'''
         labels = ["$x$", "$y$", "$x^2$", "$xy$", "$y^2$", "$x^3$", "$x^2y$", "$xy^2$", "$y^3$", "$x^4$", "$x^3y$",
@@ -424,7 +396,7 @@ def add_noise(data, std):
 
 def main():
     # Set up dataset
-    n = 11 # number of points along one axis, total number of points will be n^2
+    n = 101 # number of points along one axis, total number of points will be n^2
     rng = np.random.default_rng(seed = 25) # seed to ensure same numbers over multiple runs
     x = np.sort(rng.random((n, 1)), axis = 0)
     y = np.sort(rng.random((n, 1)), axis = 0)
