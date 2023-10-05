@@ -120,19 +120,17 @@ class regression_class:
     
     def plot_ridge_or_lasso(self, train_results, test_results, ylabel, name):
         '''Plots either MSE or R2 score for train and test data from Ridge or Lasso regression and saves to file.'''
-        plt.figure(figsize = (6,12))
         for i in range(self.n_deg_max): # one subplot for each polynomial degree
-            plt.subplot(self.n_deg_max, 1, i+1)
-
+            plt.figure()
             plt.semilogx(self.lmbda, train_results[i], label = "Training data")
             plt.semilogx(self.lmbda, test_results[i], label = "Test data")
 
-            plt.title(f"Polynomial of order {i+1}")
+            plt.text(1, 1, f"Polynomial of order {i+1}")
             plt.xlabel("$\lambda$")
             plt.ylabel(ylabel)
             plt.legend()
-        plt.tight_layout()
-        plt.savefig(f"plots/{name}.pdf")
+            plt.savefig(f"plots/{name}_{i+1}.pdf")
+            plt.close()
 
     def plot_beta_ols(self, beta, name):
         '''Plots beta values with standard deviation from OLS regression.'''
