@@ -52,7 +52,7 @@ class regression_class:
         # Pick out relevant part of design matrix for this pol_degree
         N = int((pol_degree+1)*(pol_degree+2)/2 - 1)
         X = (self.X - self.X_scaler)[:, 0:N]
-
+        
         prediction = X @ self.ols["beta"][pol_degree-1] + self.y_scaler
         return prediction
 
@@ -320,6 +320,7 @@ def add_noise(data, std):
     '''Adds noise from a normal distribution N(0,std^2) to an array of any shape.'''
     noise_matrix = np.random.normal(0, std, data.shape)
     return data + noise_matrix
+
 
 def main():
     # Set up dataset
