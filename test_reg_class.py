@@ -50,7 +50,6 @@ lmbda = [0.0001, 0.001, 0.01, 0.1, 1.0] # lambdas to try with Ridge regression
 model = reg_class.regression_class(xy, z.flatten(), n_deg_max, lmbda)
 model.ols_regression()
 model.ridge_regression()
-model.lasso_regression()
 
 
 
@@ -73,6 +72,9 @@ mse_ridge = [0]*n_deg_max
 # Get data from model
 X_train_scaled = model.X_train_scaled
 y_train_scaled = (model.y_train_scaled).reshape(-1,1)
+y_mean = model.y_mean
+y_std = model.y_std
+y_train = model.y_train
 
 for pol_degree in range(1,n_deg_max+1): # for each polynomial degree
     # Pick out relevant part of design matrix
@@ -82,7 +84,8 @@ for pol_degree in range(1,n_deg_max+1): # for each polynomial degree
     # For OLS, find beta-values and MSE using scikit-learn
     m_ols = LinearRegression().fit(X_train_scaled_N, y_train_scaled)
     beta_ols[pol_degree-1] = m_ols.coef_[0]
-    mse_ols[pol_degree-1] = mean_squared_error(m_ols.predict(X_train_scaled_N), y_train_scaled)
+    prediction = m_ols.predict(X_train_scaled_N)*y_std + y_mean
+    mse_ols[pol_degree-1] = mean_squared_error(prediction, y_train)
 
     beta_lmbda = []
     mse_lmbda = []
@@ -91,7 +94,8 @@ for pol_degree in range(1,n_deg_max+1): # for each polynomial degree
         # For Ridge, find beta-values and MSE using scikit-learn
         m_ridge = Ridge(alpha = lmbda[i]).fit(X_train_scaled_N, y_train_scaled)
         beta_lmbda.append(m_ridge.coef_[0])
-        mse_lmbda.append(mean_squared_error(m_ridge.predict(X_train_scaled_N), y_train_scaled))
+        prediction = m_ridge.predict(X_train_scaled_N)*y_std + y_mean
+        mse_lmbda.append(mean_squared_error(prediction, y_train))
 
     beta_ridge[pol_degree-1] = beta_lmbda
     mse_ridge[pol_degree-1] = mse_lmbda

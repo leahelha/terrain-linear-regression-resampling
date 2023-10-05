@@ -55,7 +55,7 @@ class regression_class:
         '''Makes a prediction with OLS model of polynomial degree pol_deg, using all X data'''
         # Pick out relevant part of design matrix for this pol_degree
         N = int((pol_degree+1)*(pol_degree+2)/2 - 1)
-        X = (self.X - self.X_scaler)[:, 0:N]
+        X = ((self.X - self.X_mean)/self.X_std)[:, 0:N]
         
         prediction = X @ self.ols["beta"][pol_degree-1]*self.y_std + self.y_mean
         return prediction
@@ -64,7 +64,7 @@ class regression_class:
         '''Makes a prediction with Ridge model of polynomial degree pol_deg, using all X data'''
         # Pick out relevant part of design matrix for this pol_degree
         N = int((pol_degree+1)*(pol_degree+2)/2 - 1)
-        X = (self.X - self.X_scaler)[:, 0:N]
+        X = ((self.X - self.X_mean)/self.X_std)[:, 0:N]
 
         prediction = X @ self.ridge["beta"][pol_degree-1][lmbda_n]*self.y_std + self.y_mean
         return prediction
@@ -73,7 +73,7 @@ class regression_class:
         '''Makes a prediction with Lasso model of polynomial degree pol_deg, using all X data'''
         # Pick out relevant part of design matrix for this pol_degree
         N = int((pol_degree+1)*(pol_degree+2)/2 - 1)
-        X = (self.X - self.X_scaler)[:, 0:N]
+        X = ((self.X - self.X_mean)/self.X_std)[:, 0:N]
 
         prediction = X @ self.lasso["beta"][pol_degree-1][lmbda_n]*self.y_std + self.y_mean
         return prediction
@@ -393,13 +393,13 @@ class regression_class:
         '''Plots MSE, R2 score and beta values for Ridge regression and saves to file.'''
         self.plot_ridge_or_lasso(self.ridge["mse_train"], self.ridge["mse_test"], "Mean Squared Error", "mse_ridge")
         self.plot_ridge_or_lasso(self.ridge["r2_train"], self.ridge["r2_test"], f"$R^2$", "r2_ridge")
-        self.plot_beta_ridge_or_lasso(self.ridge["beta"], self.lmbda, "beta_ridge")
+        # self.plot_beta_ridge_or_lasso(self.ridge["beta"], self.lmbda, "beta_ridge")
 
     def plot_lasso_results(self):
         '''Plots MSE, R2 score and beta values for Lasso regression and saves to file.'''
         self.plot_ridge_or_lasso(self.lasso["mse_train"], self.lasso["mse_test"], "Mean Squared Error", "mse_lasso")
         self.plot_ridge_or_lasso(self.lasso["r2_train"], self.lasso["r2_test"], f"$R^2$", "r2_lasso")
-        self.plot_beta_ridge_or_lasso(self.lasso["beta"], self.lmbda, "beta_lasso")
+        # self.plot_beta_ridge_or_lasso(self.lasso["beta"], self.lmbda, "beta_lasso")
 
 
 def FrankeFunction(x,y):
