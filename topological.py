@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import reg_class
 
-n_deg_max = 9 # max polynomial degree
+n_deg_max = 10 # max polynomial degree
 lmbda = [0.0001, 0.001, 0.01, 0.1, 1.0] # lambdas to try with Ridge regression
 
 # Load the terrain
@@ -13,7 +13,6 @@ terrain1 = imread('SRTM_data_Norway_1.tif')
 
 # Plot terrain
 plt.figure()
-plt.title('Terrain over Norway 1')
 plt.imshow(terrain1, cmap='gray')
 plt.xlabel('X')
 plt.ylabel('Y')
@@ -34,10 +33,10 @@ model = reg_class.regression_class(xy, terrain1.flatten(), n_deg_max, lmbda)
 
 # Do regression
 model.ols_regression()
-model.ridge_regression()
-model.lasso_regression()
+# model.ridge_regression()
+# model.lasso_regression()
 
 # Plot results
 model.plot_ols_results()
-model.plot_ridge_results()
-model.plot_lasso_results()
+# model.plot_ridge_results()
+# model.plot_lasso_results()

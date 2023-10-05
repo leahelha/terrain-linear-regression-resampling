@@ -33,20 +33,23 @@ class regression_class:
             self.lasso[key] = [0]*self.n_deg_max
         
         self.make_design_matrix()
-        self.scale_design_matrix()
+        self.normalise_design_matrix()
 
     def make_design_matrix(self):
         '''Makes design matrix and splits into training and test data'''
         self.X = PolynomialFeatures(self.n_deg_max, include_bias = False).fit_transform(self.x) # without intercept
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size = 0.2, random_state = 3) # random_state gives same partition across multiple function calls
 
-    def scale_design_matrix(self):
-        '''Scales data by subtracting mean'''
-        self.X_scaler = np.mean(self.X_train, axis = 0)
-        self.y_scaler = np.mean(self.y_train)
-        self.X_train_scaled = self.X_train - self.X_scaler
-        self.y_train_scaled = self.y_train - self.y_scaler
-        self.X_test_scaled = self.X_test - self.X_scaler
+    def normalise_design_matrix(self):
+        '''Normalise data by subtracting mean and dividing by standard deviation'''
+        self.X_mean = np.mean(self.X_train, axis = 0)
+        self.y_mean = np.mean(self.y_train)
+        self.X_std = np.std(self.X_train, axis = 0)
+        self.y_std = np.std(self.y_train)
+
+        self.X_train_scaled = (self.X_train - self.X_mean)/self.X_std
+        self.y_train_scaled = (self.y_train - self.y_mean)/self.y_std
+        self.X_test_scaled = (self.X_test - self.X_mean)/self.X_std
 
     def predict_ols(self, pol_degree):
         '''Makes a prediction with OLS model of polynomial degree pol_deg, using all X data'''
@@ -54,7 +57,7 @@ class regression_class:
         N = int((pol_degree+1)*(pol_degree+2)/2 - 1)
         X = (self.X - self.X_scaler)[:, 0:N]
         
-        prediction = X @ self.ols["beta"][pol_degree-1] + self.y_scaler
+        prediction = X @ self.ols["beta"][pol_degree-1]*self.y_std + self.y_mean
         return prediction
 
     def predict_ridge(self, pol_degree, lmbda_n):
@@ -63,7 +66,7 @@ class regression_class:
         N = int((pol_degree+1)*(pol_degree+2)/2 - 1)
         X = (self.X - self.X_scaler)[:, 0:N]
 
-        prediction = X @ self.ridge["beta"][pol_degree-1][lmbda_n] + self.y_scaler
+        prediction = X @ self.ridge["beta"][pol_degree-1][lmbda_n]*self.y_std + self.y_mean
         return prediction
 
     def predict_lasso(self, pol_degree, lmbda_n):
@@ -72,18 +75,18 @@ class regression_class:
         N = int((pol_degree+1)*(pol_degree+2)/2 - 1)
         X = (self.X - self.X_scaler)[:, 0:N]
 
-        prediction = X @ self.lasso["beta"][pol_degree-1][lmbda_n] + self.y_scaler
+        prediction = X @ self.lasso["beta"][pol_degree-1][lmbda_n]*self.y_std + self.y_mean
         return prediction
     
     def beta_ols(self, X, y):
         '''Given the design matrix X and the output y, calculates the coefficients beta using OLS.'''
-        beta = np.linalg.inv(X.T @ X) @ X.T @ y
+        beta = np.linalg.pinv(X.T @ X) @ X.T @ y
         return beta
 
     def beta_ridge(self, X, y, lmbda):
         '''Given the design matrix X, the output y and the parameter lmbda, calculates the coefficients beta using OLS.'''
         n = np.shape(X)[1]
-        beta = np.linalg.inv(X.T @ X + lmbda*np.eye(n)) @ X.T @ y
+        beta = np.linalg.pinv(X.T @ X + lmbda*np.eye(n)) @ X.T @ y
         return beta
 
     def mse_own(self, y_tilde, y):
@@ -109,8 +112,8 @@ class regression_class:
         beta = self.beta_ols(X_train_scaled, self.y_train_scaled)
 
         # Make predictions
-        y_train_pred = X_train_scaled @ beta + self.y_scaler
-        y_test_pred = X_test_scaled @ beta + self.y_scaler
+        y_train_pred = X_train_scaled @ beta * self.y_std + self.y_mean
+        y_test_pred = X_test_scaled @ beta * self.y_std + self.y_mean
 
         # Calculate MSE and R^2 for both training and test data
         mse_train = self.mse_own(y_train_pred, self.y_train)
@@ -138,8 +141,8 @@ class regression_class:
             beta[i] = self.beta_ridge(X_train_scaled, self.y_train_scaled, self.lmbda[i])
 
             # Make predictions
-            y_train_pred = X_train_scaled @ beta[i] + self.y_scaler
-            y_test_pred = X_test_scaled @ beta[i] + self.y_scaler
+            y_train_pred = X_train_scaled @ beta[i] * self.y_std + self.y_mean
+            y_test_pred = X_test_scaled @ beta[i] * self.y_std + self.y_mean
 
             # Calculate MSE and R^2 for both training and test data
             mse_train[i] = self.mse_own(y_train_pred, self.y_train)
@@ -168,8 +171,8 @@ class regression_class:
             beta[i] = model.coef_
 
             # Make predictions
-            y_train_pred = X_train_scaled @ beta[i] + self.y_scaler
-            y_test_pred = X_test_scaled @ beta[i] + self.y_scaler
+            y_train_pred = X_train_scaled @ beta[i] * self.y_std + self.y_mean
+            y_test_pred = X_test_scaled @ beta[i] * self.y_std + self.y_mean
 
             # Calculate MSE and R^2 for both training and test data
             mse_train[i] = self.mse_own(y_train_pred, self.y_train)
