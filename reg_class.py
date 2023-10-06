@@ -291,8 +291,8 @@ class regression_class:
         elif type == "lasso":
             mse_values = self.lasso["mse_test"]
         else:
-            print("Must specify 'ridge' or 'lasso' when calling find_optimal_lambda.")
-        
+            raise ValueError("Must specify 'ridge' or 'lasso' when calling find_optimal_lambda.")
+            
         # List to store optimal lambda and corresponding MSE for each polynomial degree
         optimaL_values = [0]*self.n_deg_max
 
@@ -309,14 +309,14 @@ class regression_class:
         return optimaL_values
     
     def find_optimal_lambda_kfold(self, type):
-        '''For either Ridge or Lasso regression, finds and returns lambda value that gives lowest MSE_test and corresponding MSE_test for each polynomial degree.'''
+        '''For either Ridge or Lasso regression, finds and returns lambda value that gives lowest MSE_score for each polynomial degree.'''
         
         if type == "ridge":
             mse_kfold = self.ridge["mse_kfold"]
         elif type == "lasso":
             mse_kfold = self.lasso["mse_kfold"]
         else:
-            print("Must specify 'ridge' or 'lasso' when calling find_optimal_model.")
+            raise ValueError("Must specify 'ridge' or 'lasso' when calling find_optimal_lambda.")
         
         # List to store optimal lambda and corresponding MSE for each polynomial degree
         optimaL_values = [0]*self.n_deg_max
@@ -444,6 +444,13 @@ def main():
     model.ols_kfold()
     model.ridge_kfold()
     model.lasso_kfold()
+
+    # Make latex tables:
+    optimaL_values_rigde = model.find_optimal_lambda(type = "ridge")
+    optimaL_values_lasso = model.find_optimal_lambda(type = "lasso")
+
+    optimaL_values_kfold_rigde = model.find_optimal_lambda_kfold(type = "ridge")
+    optimaL_values_kfold_lasso = model.find_optimal_lambda_kfold(type = "lasso")
 
     # # Plot results
     # model.plot_ols_results()
