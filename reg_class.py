@@ -210,26 +210,29 @@ class regression_class:
             x_test = x_shuffled[test_inds]
             y_test = y_shuffled[test_inds]
 
-            # Train: Centring and design matrix
+            # Train: Standardize and design matrix
             X_train = poly.fit_transform(x_train)
+
             X_train_scalar = np.mean(X_train, axis = 0)
+            X_train_std = np.std(X_train, axis = 0)
             y_train_scalar = np.mean(y_train)
+            y_train_std = np.std(y_train)
 
-            X_centred_train = X_train - X_train_scalar
-            y_centred_train = y_train - y_train_scalar
+            X_standardize_train = (X_train - X_train_scalar) / X_train_std
+            y_standardize_train = (y_train - y_train_scalar) / y_train_std
 
-            # Test: Centring and design matrix
+            # Test: Standardize and design matrix
             X_test = poly.fit_transform(x_test)
 
-            X_centred_test = X_test - X_train_scalar # Trent på trenings skaleringen
-            y_centred_test = y_test - y_train_scalar
+            X_standardize_test = (X_test - X_train_scalar) / X_train_std # Trent på trenings skaleringen
+            y_standardize_test = (y_test - y_train_scalar) / y_train_std
 
             # Fitting on train data, and predicting on test data:
-            model.fit(X_centred_train, y_centred_train)
-            y_centred_pred = model.predict(X_centred_test)
+            model.fit(X_standardize_train, y_standardize_train)
+            y_standardize_pred = model.predict(X_standardize_test)
             
             # Scores: mse
-            scores_KFold[i] = np.sum((y_centred_pred - y_centred_test)**2)/np.size(y_centred_pred)      
+            scores_KFold[i] = np.sum((y_standardize_pred - y_standardize_test)**2)/np.size(y_standardize_pred)      
 
         scores_KFold_mean = np.mean(scores_KFold)
         return scores_KFold_mean
@@ -430,7 +433,7 @@ def main():
     # Plot Franke function
     fig, ax = plt.subplots(subplot_kw = {"projection": "3d"})
     ax.plot_surface(x_, y_, z, cmap = cm.coolwarm)
-    fig.savefig("plots/franke.pdf")
+    # fig.savefig("plots/franke.pdf")
 
     n_deg_max = 5 # max polynomial degree
     lmbda = [0.0001, 0.001, 0.01, 0.1, 1.0] # lambdas to try with Ridge regression
