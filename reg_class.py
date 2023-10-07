@@ -238,11 +238,13 @@ class regression_class:
         return scores_KFold_mean
 
     def ols_kfold(self):
+        '''Calculates kfold with OLS for polynomials of degree 1 to n_deg_max.'''
         for i in trange(self.n_deg_max):
             ols_score = self.kFold_linreg(i + 1, LinearRegression)
             self.ols["mse_kfold"][i] = ols_score
     
     def ridge_kfold(self):
+        '''Calculates kfold with Ridge regression for polynomials of degree 1 to n_deg_max.'''
         for i in trange(self.n_deg_max):
             ridge_score = [0]*len(self.lmbda)
             for j in range(len(self.lmbda)):
@@ -250,6 +252,7 @@ class regression_class:
             self.ridge["mse_kfold"][i] = ridge_score
     
     def lasso_kfold(self):
+        '''Calculates kfold with Lasso regression for polynomials of degree 1 to n_deg_max.'''
         for i in trange(self.n_deg_max):
             lasso_score = [0]*len(self.lmbda)
             for j in range(len(self.lmbda)):
@@ -348,7 +351,7 @@ class regression_class:
 
     def plot_ridge_or_lasso(self, train_results, test_results, ylabel, name):
         '''Plots either MSE or R2 score for train and test data from Ridge or Lasso regression and saves to file.'''
-        for i in range(self.n_deg_max): # one subplot for each polynomial degree
+        for i in range(self.n_deg_max):
             plt.figure()
             plt.semilogx(self.lmbda, train_results[i], label = "Training data")
             plt.semilogx(self.lmbda, test_results[i], label = "Test data")
@@ -367,42 +370,49 @@ class regression_class:
             degrees = range(1, n_deg_max + 1, 2)
 
         plt.figure(figsize = (15,5))
+        plt.title(f"{name}")
         for degree in degrees:
             indicies = range(len(beta[degree - 1]))
-            plt.bar(indicies, beta[degree - 1], label = f"degree = {degree}")
+            degree_std = np.std(beta[degree - 1])
+            plt.bar(indicies, beta[degree - 1], label = f"degree = {degree}, std = {degree_std}")
         plt.legend()
         plt.savefig(f"plots/{name}.pdf")
+        plt.show()
               
-    def plot_beta_ridge_or_lasso(self, beta, lmbda, name):
+    def plot_beta_ridge_or_lasso(self, beta, lmbda, name, degrees = None):
         '''Plots beta values with standard deviation from Ridge or Lasso regression.'''
-        labels = ["$x$", "$y$", "$x^2$", "$xy$", "$y^2$", "$x^3$", "$x^2y$", "$xy^2$", "$y^3$", "$x^4$", "$x^3y$",
-                "$x^2y^2$", "$xy^3$", "$y^4$", "$x^5$", "$x^4y$", "$x^3y^2$", "$x^2y^3$", "$xy^4$", "$y^5$"]
-        for i in trange(len(lmbda)): # TODO: Ikke subplots
-            plt.figure(figsize = (15,5))
-            for j in range(len(beta)):
-                plt.subplot(1, len(beta), j+1)
-                plt.bar(labels[:len(beta[j][i])], beta[j][i])
-            plt.savefig(f"plots/{name}_{lmbda[i]}.pdf")
-                #     for j in range(len(degree)):
-                # plt.bar(, beta[i], labels = "degree = {degree}")
+        if degrees is None:
+            n_deg_max = self.n_deg_max
+            degrees = range(1, n_deg_max + 1, 2)
 
-    def plot_ols_results(self, name = "beta_ols"):
+        for j in trange(len(lmbda)):
+            plt.figure(figsize = (15,5))
+            plt.title(f"{name}, with lambda = {lmbda[j]}")
+            for degree in degrees:
+                indicies = range(len(beta[degree - 1][j]))
+                degree_std = np.std(beta[degree - 1][j])
+                plt.bar(indicies, beta[degree - 1][j], label = f"degree = {degree}, std = {degree_std}")
+            plt.legend()
+            plt.savefig(f"plots/{name}_{lmbda[i]}.pdf")
+        plt.show()
+
+    def plot_ols_results(self, degrees = None):
         '''Plots MSE, R2 score and beta values for OLS regression and saves to file.'''
         self.plot_ols(self.ols["mse_train"], self.ols["mse_test"], "Mean Squared Error", "mse_ols")
         self.plot_ols(self.ols["r2_train"], self.ols["r2_test"], f"$R^2$", "r2_ols")
-        self.plot_beta_ols(self.ols["beta"], name)
+        self.plot_beta_ols(self.ols["beta"], "beta_ols", degrees = None)
     
-    def plot_ridge_results(self):
+    def plot_ridge_results(self, degrees = None):
         '''Plots MSE, R2 score and beta values for Ridge regression and saves to file.'''
         self.plot_ridge_or_lasso(self.ridge["mse_train"], self.ridge["mse_test"], "Mean Squared Error", "mse_ridge")
         self.plot_ridge_or_lasso(self.ridge["r2_train"], self.ridge["r2_test"], f"$R^2$", "r2_ridge")
-        # self.plot_beta_ridge_or_lasso(self.ridge["beta"], self.lmbda, "beta_ridge")
+        self.plot_beta_ridge_or_lasso(self.ridge["beta"], self.lmbda, "beta_ridge", degrees = None)
 
-    def plot_lasso_results(self):
+    def plot_lasso_results(self, degrees = None):
         '''Plots MSE, R2 score and beta values for Lasso regression and saves to file.'''
         self.plot_ridge_or_lasso(self.lasso["mse_train"], self.lasso["mse_test"], "Mean Squared Error", "mse_lasso")
         self.plot_ridge_or_lasso(self.lasso["r2_train"], self.lasso["r2_test"], f"$R^2$", "r2_lasso")
-        # self.plot_beta_ridge_or_lasso(self.lasso["beta"], self.lmbda, "beta_lasso")
+        self.plot_beta_ridge_or_lasso(self.lasso["beta"], self.lmbda, "beta_lasso", degrees = None)
 
 
 def FrankeFunction(x,y):
@@ -420,6 +430,7 @@ def add_noise(data, std):
 
 
 def main():
+    print("Remeber to turn on savefig!!!")
     # Set up dataset
     n = 101 # number of points along one axis, total number of points will be n^2
     rng = np.random.default_rng(seed = 25) # seed to ensure same numbers over multiple runs
@@ -456,9 +467,11 @@ def main():
     optimaL_values_kfold_lasso = model.find_optimal_lambda_kfold(type = "lasso")
 
     # # Plot results
-    # model.plot_ols_results()
-    # model.plot_ridge_results()
-    # model.plot_lasso_results()
+    degrees = None # A list of chosen degrees, (must start at 1)
+    model.plot_ols_results()
+    model.plot_ridge_results()
+    model.plot_lasso_results()
+    print("Remeber to turn on savefig!!!")
 
 if __name__ == "__main__":
     main()
