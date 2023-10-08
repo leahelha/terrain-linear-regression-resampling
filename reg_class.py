@@ -6,6 +6,7 @@ from tqdm import trange
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from pathlib import Path
+from tabulate import tabulate
 
 class regression_class:
     '''Does OLS, Ridge and Lasso regression with a polynomial model of degree up to n_deg_max.
@@ -21,6 +22,7 @@ class regression_class:
         self.y = y
         self.n_deg_max = n_deg_max
         self.lmbda = lmbda
+        self.root_path = Path.cwd()
 
         # Initialise dictionaries to store results
         keys = ["beta", "mse_train", "mse_test", "r2_train", "r2_test", "mse_kfold"]
@@ -102,7 +104,6 @@ class regression_class:
 
     def fit_predict_ols(self, pol_degree):
         '''For a given polynomial order, makes and trains an OLS model and calculates MSE for both training and test data.'''
-        
         # Pick out relevant part of design matrix
         N = int((pol_degree+1)*(pol_degree+2)/2 - 1)
         X_train_scaled = self.X_train_scaled[:, 0:N]
@@ -291,7 +292,6 @@ class regression_class:
     
     def find_optimal_lambda(self, type):
         '''For either Ridge or Lasso regression, finds and returns lambda value that gives lowest MSE_test and corresponding MSE_test for each polynomial degree.'''
-        
         if type == "ridge":
             mse_values = self.ridge["mse_test"]
         elif type == "lasso":
@@ -315,8 +315,7 @@ class regression_class:
         return optimaL_values
     
     def find_optimal_lambda_kfold(self, type):
-        '''For either Ridge or Lasso regression, finds and returns lambda value that gives lowest MSE_score for each polynomial degree.'''
-        
+        '''For either Ridge or Lasso regression, finds and returns lambda value and MSE_score, that gives lowest MSE_score for each polynomial degree.'''
         if type == "ridge":
             mse_kfold = self.ridge["mse_kfold"]
         elif type == "lasso":
@@ -339,6 +338,22 @@ class regression_class:
             optimaL_values[i] = (self.lmbda[min_index], min_el)
         return optimaL_values
 
+    def savefig(self, fname, folder = None, fig = None):
+        if folder is None:
+            folder = "plots"
+
+        root_path = self.root_path
+        abs_path = root_path / folder
+        abs_path.mkdir(exist_ok=True)
+
+        filename = abs_path / fname
+        if fig is None:
+            plt.savefig(filename)
+        else:
+            fig.savefig(filename)
+
+
+
     def plot_ols(self, train_results, test_results, ylabel, name):
         '''Plots either MSE or R2 score for train and test data from OLS and saves to file.'''
         plt.figure(figsize = (6,4))
@@ -347,10 +362,10 @@ class regression_class:
         plt.xlabel("Polynomial degree")
         plt.ylabel(ylabel)
         plt.legend()
-        plt.savefig(f"plots/{name}.pdf")
+        self.savefig(f"{name}.pdf")
 
     def plot_ridge_or_lasso(self, train_results, test_results, ylabel, name):
-        '''Plots either MSE or R2 score for train and test data from Ridge or Lasso regression and saves to file.'''
+        '''Plots either MSE or R2 score for train and test data from Ridge or Lasso regression and saves to file.'''    
         for i in range(self.n_deg_max):
             plt.figure()
             plt.semilogx(self.lmbda, train_results[i], label = "Training data")
@@ -360,7 +375,7 @@ class regression_class:
             plt.xlabel("$\lambda$")
             plt.ylabel(ylabel)
             plt.legend()
-            plt.savefig(f"plots/{name}_{i+1}.pdf")
+            self.savefig(f"{name}_{i+1}.pdf")
             plt.close()
 
     def plot_beta_ols(self, beta, name, degrees = None):
@@ -376,8 +391,8 @@ class regression_class:
             degree_std = np.std(beta[degree - 1])
             plt.bar(indicies, beta[degree - 1], label = f"degree = {degree}, std = {degree_std}")
         plt.legend()
-        plt.savefig(f"plots/{name}.pdf")
-        plt.show()
+        self.savefig(f"{name}.pdf")
+        # plt.show()
               
     def plot_beta_ridge_or_lasso(self, beta, lmbda, name, degrees = None):
         '''Plots beta values with standard deviation from Ridge or Lasso regression.'''
@@ -393,8 +408,8 @@ class regression_class:
                 degree_std = np.std(beta[degree - 1][j])
                 plt.bar(indicies, beta[degree - 1][j], label = f"degree = {degree}, std = {degree_std}")
             plt.legend()
-            plt.savefig(f"plots/{name}_{lmbda[i]}.pdf")
-        plt.show()
+            self.savefig(f"{name}_{lmbda[j]}.pdf")
+        # plt.show()
 
     def plot_ols_results(self, degrees = None):
         '''Plots MSE, R2 score and beta values for OLS regression and saves to file.'''
@@ -414,6 +429,49 @@ class regression_class:
         self.plot_ridge_or_lasso(self.lasso["r2_train"], self.lasso["r2_test"], f"$R^2$", "r2_lasso")
         self.plot_beta_ridge_or_lasso(self.lasso["beta"], self.lmbda, "beta_lasso", degrees = None)
 
+    def create_latex_table(self, optimal_values, name, type, kfold = None):
+        '''Creates a latex table from the optimal values from the regclass code.'''
+        if kfold is True:
+            headers = ["degree", "lambda", "mse score"]
+        elif kfold is False:
+            headers = ["degree", "lambda", "mse test"]
+        else:
+            raise VauleError("Must specify a value for the bool kfold, not {kfold}")
+
+        output = []
+        for i in range(len(optimal_values)):
+            pol_degree = i + 1
+            lmbda = optimal_values[i][0]
+            mse_value = optimal_values[i][1]
+
+            output.append([pol_degree, lmbda, mse_value])
+        
+        table = tabulate(output, headers=headers, tablefmt = "latex")
+
+        root_path = self.root_path
+        abs_path = root_path / "tables"
+        abs_path.mkdir(exist_ok=True)
+
+        fname = f"{name}_{type}.tex"
+        filename = abs_path / fname
+        with open(filename, "w") as outfile:
+            outfile.write(table)
+    
+    def create_tables(self):
+        optimal_values_rigde = self.find_optimal_lambda(type = "ridge")
+        optimal_values_lasso = self.find_optimal_lambda(type = "lasso")
+
+        optimal_values_kfold_rigde = self.find_optimal_lambda_kfold(type = "ridge")
+        optimal_values_kfold_lasso = self.find_optimal_lambda_kfold(type = "lasso")
+
+
+        self.create_latex_table(optimal_values_rigde, "optimal_lambda_values", type = "rigde", kfold = False)
+        self.create_latex_table(optimal_values_lasso, "optimal_lambda_values", type = "lasso", kfold = False)
+        
+        self.create_latex_table(optimal_values_kfold_rigde, "optimal_lambda_values_kfold", type = "rigde", kfold = True)
+        self.create_latex_table(optimal_values_kfold_lasso, "optimal_lambda_values_kfold", type = "lasso", kfold = True)
+
+
 
 def FrankeFunction(x,y):
     '''Calculates the two-dimensional Franke's function.'''
@@ -428,9 +486,7 @@ def add_noise(data, std):
     noise_matrix = np.random.normal(0, std, data.shape)
     return data + noise_matrix
 
-
 def main():
-    print("Remeber to turn on savefig!!!")
     # Set up dataset
     n = 101 # number of points along one axis, total number of points will be n^2
     rng = np.random.default_rng(seed = 25) # seed to ensure same numbers over multiple runs
@@ -440,11 +496,6 @@ def main():
     xy = np.stack((np.ravel(x_),np.ravel(y_)), axis = -1) # formatting needed to set up the design matrix
     # z = add_noise(FrankeFunction(x_, y_), 0.1)
     z = FrankeFunction(x_, y_)
-
-    # Plot Franke function
-    fig, ax = plt.subplots(subplot_kw = {"projection": "3d"})
-    ax.plot_surface(x_, y_, z, cmap = cm.coolwarm)
-    # fig.savefig("plots/franke.pdf")
 
     n_deg_max = 5 # max polynomial degree
     lmbda = [0.0001, 0.001, 0.01, 0.1, 1.0] # lambdas to try with Ridge regression
@@ -459,19 +510,19 @@ def main():
     model.ridge_kfold()
     model.lasso_kfold()
 
-    # Make latex tables:
-    optimaL_values_rigde = model.find_optimal_lambda(type = "ridge")
-    optimaL_values_lasso = model.find_optimal_lambda(type = "lasso")
-
-    optimaL_values_kfold_rigde = model.find_optimal_lambda_kfold(type = "ridge")
-    optimaL_values_kfold_lasso = model.find_optimal_lambda_kfold(type = "lasso")
-
     # # Plot results
     degrees = None # A list of chosen degrees, (must start at 1)
-    model.plot_ols_results()
-    model.plot_ridge_results()
-    model.plot_lasso_results()
-    print("Remeber to turn on savefig!!!")
+    model.plot_ols_results(degrees=degrees)
+    model.plot_ridge_results(degrees=degrees)
+    model.plot_lasso_results(degrees=degrees)
+
+    # Plot Franke function
+    fig, ax = plt.subplots(subplot_kw = {"projection": "3d"})
+    ax.plot_surface(x_, y_, z, cmap = cm.coolwarm)
+    model.savefig("franke.pdf", fig = fig)
+
+    # Make latex tables
+    model.create_tables()
 
 if __name__ == "__main__":
     main()
