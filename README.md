@@ -23,6 +23,7 @@ We use a syntizhed dataset that is made using the _Franke function_. The functio
 
 ### Real data:
 The dataset is digital terrain data of Norway. It is the file **SRTM_data_Norway_1.tif** and can be found at:
+
 [https://github.com/CompPhysics/MachineLearning/blob/master/doc/Projects/2023/Project1/DataFiles/SRTM_data_Norway_1.tif
 ](https://github.com/CompPhysics/MachineLearning/blob/master/doc/Projects/2023/Project1/DataFiles/SRTM_data_Norway_1.tif
 )
