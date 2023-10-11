@@ -45,7 +45,13 @@ python3 reg_class.py
 
 it will be on the synthized dataset (made from the _Franke function_).
 
-The files **cross_val.py** and **cross_val_debug.py** was created for developing and debugging the cross validation code in **reg_class.py** and are irrelevant for the analysis. However **test_reg_class.py** is where we have tested that our code ran correctly. To run the test write this in the terminal:
+The files **cross_val.py** and **cross_val_debug.py** was created for developing and debugging the cross validation code in **reg_class.py** and are irrelevant for the analysis. However to run the other resampling method, _bootstrap_, you need to run:
+
+```Python
+python3 ec3.py
+```
+
+Lastly **test_reg_class.py** is where we have tested that our code ran correctly. To run these tests write this in the terminal:
 
 ```Python
 python3 test_reg_class.py
