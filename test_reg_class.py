@@ -84,8 +84,8 @@ for pol_degree in range(1,n_deg_max+1): # for each polynomial degree
     # For OLS, find beta-values and MSE using scikit-learn
     m_ols = LinearRegression().fit(X_train_scaled_N, y_train_scaled)
     beta_ols[pol_degree-1] = m_ols.coef_[0]
-    prediction = m_ols.predict(X_train_scaled_N)*y_std + y_mean
-    mse_ols[pol_degree-1] = mean_squared_error(prediction, y_train)
+    prediction = m_ols.predict(X_train_scaled_N)
+    mse_ols[pol_degree-1] = mean_squared_error(prediction, y_train_scaled)
 
     beta_lmbda = []
     mse_lmbda = []
@@ -94,8 +94,8 @@ for pol_degree in range(1,n_deg_max+1): # for each polynomial degree
         # For Ridge, find beta-values and MSE using scikit-learn
         m_ridge = Ridge(alpha = lmbda[i]).fit(X_train_scaled_N, y_train_scaled)
         beta_lmbda.append(m_ridge.coef_[0])
-        prediction = m_ridge.predict(X_train_scaled_N)*y_std + y_mean
-        mse_lmbda.append(mean_squared_error(prediction, y_train))
+        prediction = m_ridge.predict(X_train_scaled_N)
+        mse_lmbda.append(mean_squared_error(prediction, y_train_scaled))
 
     beta_ridge[pol_degree-1] = beta_lmbda
     mse_ridge[pol_degree-1] = mse_lmbda
