@@ -456,6 +456,36 @@ class regression_class:
         filename = abs_path / fname
         with open(filename, "w") as outfile:
             outfile.write(table)
+
+
+    def create_latex_table_ols(self, name, kfold = None): # TODO: Med og uten kfold (mse test, mse score)
+        if kfold is True:
+            headers = ["degree", "mse score"]
+            mse_key = "mse_kfold"
+        elif kfold is False:
+            headers = ["degree", "mse test"]
+            mse_key = "mse_test"
+        else:
+            raise VauleError("Must specify a value for the bool kfold, not {kfold}")
+
+        output = []
+        mse_values = self.ols[mse_key]
+        for i in range(len(mse_values)):
+            pol_degree = i + 1
+            mse_value = mse_values[i]
+            output.append([pol_degree, mse_value])
+        
+        table = tabulate(output, headers=headers, tablefmt = "latex")
+
+        root_path = self.root_path
+        abs_path = root_path / "tables"
+        abs_path.mkdir(exist_ok=True)
+
+        fname = f"{name}.tex"
+        filename = abs_path / fname
+        with open(filename, "w") as outfile:
+            outfile.write(table)
+
     
     def create_tables(self):
         optimal_values_rigde = self.find_optimal_lambda(type = "ridge")
@@ -464,12 +494,15 @@ class regression_class:
         optimal_values_kfold_rigde = self.find_optimal_lambda_kfold(type = "ridge")
         optimal_values_kfold_lasso = self.find_optimal_lambda_kfold(type = "lasso")
 
-
         self.create_latex_table(optimal_values_rigde, "optimal_lambda_values", type = "rigde", kfold = False)
         self.create_latex_table(optimal_values_lasso, "optimal_lambda_values", type = "lasso", kfold = False)
         
         self.create_latex_table(optimal_values_kfold_rigde, "optimal_lambda_values_kfold", type = "rigde", kfold = True)
         self.create_latex_table(optimal_values_kfold_lasso, "optimal_lambda_values_kfold", type = "lasso", kfold = True)
+
+
+        self.create_latex_table_ols("mse_test_values_ols", kfold = False)
+        self.create_latex_table_ols("mse_score_values_ols_kfold", kfold = True)
 
 
 
