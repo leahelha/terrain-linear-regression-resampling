@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from pathlib import Path
 from tabulate import tabulate
+from rounders import round_to_figures
+
 
 class regression_class:
     '''Does OLS, Ridge and Lasso regression with a polynomial model of degree up to n_deg_max.
@@ -23,6 +25,7 @@ class regression_class:
         self.n_deg_max = n_deg_max
         self.lmbda = lmbda
         self.root_path = Path.cwd()
+        self.sigfig = 5 # Amount of significant figures in the Latex tables
 
         # Initialise dictionaries to store results
         keys = ["beta", "mse_train", "mse_test", "r2_train", "r2_test", "mse_kfold"]
@@ -452,7 +455,7 @@ class regression_class:
         for i in range(len(optimal_values)):
             pol_degree = i + 1
             lmbda = optimal_values[i][0]
-            mse_value = optimal_values[i][1]
+            mse_value = round_to_figures(optimal_values[i][1], self.sigfig)
 
             output.append([pol_degree, lmbda, mse_value])
         
@@ -468,7 +471,7 @@ class regression_class:
             outfile.write(table)
 
 
-    def create_latex_table_ols(self, name, kfold = None): # TODO: Med og uten kfold (mse test, mse score)
+    def create_latex_table_ols(self, name, kfold = None):
         if kfold is True:
             headers = ["degree", "mse score"]
             mse_key = "mse_kfold"
@@ -482,7 +485,7 @@ class regression_class:
         mse_values = self.ols[mse_key]
         for i in range(len(mse_values)):
             pol_degree = i + 1
-            mse_value = mse_values[i]
+            mse_value = round_to_figures(mse_values[i], self.sigfig)
             output.append([pol_degree, mse_value])
         
         table = tabulate(output, headers=headers, tablefmt = "latex")
