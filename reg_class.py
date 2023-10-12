@@ -50,6 +50,7 @@ class regression_class:
         self.X_train_scaled = (self.X_train - self.X_mean)/self.X_std
         self.y_train_scaled = (self.y_train - self.y_mean)/self.y_std
         self.X_test_scaled = (self.X_test - self.X_mean)/self.X_std
+        self.y_test_scaled = (self.y_test - self.y_mean)/self.y_std
 
     def predict_ols(self, pol_degree):
         '''Makes a prediction with OLS model of polynomial degree pol_deg, using all X data'''
@@ -112,14 +113,17 @@ class regression_class:
         beta = self.beta_ols(X_train_scaled, self.y_train_scaled)
 
         # Make predictions
-        y_train_pred = X_train_scaled @ beta * self.y_std + self.y_mean
-        y_test_pred = X_test_scaled @ beta * self.y_std + self.y_mean
+        # y_train_pred = X_train_scaled @ beta * self.y_std + self.y_mean
+        # y_test_pred = X_test_scaled @ beta * self.y_std + self.y_mean
+
+        y_train_pred = X_train_scaled @ beta
+        y_test_pred = X_test_scaled @ beta
 
         # Calculate MSE and R^2 for both training and test data
-        mse_train = self.mse_own(y_train_pred, self.y_train)
-        mse_test = self.mse_own(y_test_pred, self.y_test)
-        r2_train = self.r2_own(y_train_pred, self.y_train)
-        r2_test = self.r2_own(y_test_pred, self.y_test)
+        mse_train = self.mse_own(y_train_pred, self.y_train_scaled)
+        mse_test = self.mse_own(y_test_pred, self.y_test_scaled)
+        r2_train = self.r2_own(y_train_pred, self.y_train_scaled)
+        r2_test = self.r2_own(y_test_pred, self.y_test_scaled)
 
         return beta, mse_train, mse_test, r2_train, r2_test
     
@@ -141,14 +145,17 @@ class regression_class:
             beta[i] = self.beta_ridge(X_train_scaled, self.y_train_scaled, self.lmbda[i])
 
             # Make predictions
-            y_train_pred = X_train_scaled @ beta[i] * self.y_std + self.y_mean
-            y_test_pred = X_test_scaled @ beta[i] * self.y_std + self.y_mean
+            y_train_pred = X_train_scaled @ beta[i]
+            y_test_pred = X_test_scaled @ beta[i]
+
+            # y_train_pred = X_train_scaled @ beta * self.y_std + self.y_mean
+            # y_test_pred = X_test_scaled @ beta * self.y_std + self.y_mean
 
             # Calculate MSE and R^2 for both training and test data
-            mse_train[i] = self.mse_own(y_train_pred, self.y_train)
-            mse_test[i] = self.mse_own(y_test_pred, self.y_test)
-            r2_train[i] = self.r2_own(y_train_pred, self.y_train)
-            r2_test[i] = self.r2_own(y_test_pred, self.y_test)
+            mse_train[i] = self.mse_own(y_train_pred, self.y_train_scaled)
+            mse_test[i] = self.mse_own(y_test_pred, self.y_test_scaled)
+            r2_train[i] = self.r2_own(y_train_pred, self.y_train_scaled)
+            r2_test[i] = self.r2_own(y_test_pred, self.y_test_scaled)
 
         return beta, mse_train, mse_test, r2_train, r2_test
     
@@ -171,14 +178,17 @@ class regression_class:
             beta[i] = model.coef_
 
             # Make predictions
-            y_train_pred = X_train_scaled @ beta[i] * self.y_std + self.y_mean
-            y_test_pred = X_test_scaled @ beta[i] * self.y_std + self.y_mean
+            y_train_pred = X_train_scaled @ beta[i]
+            y_test_pred = X_test_scaled @ beta[i]
+
+            # y_train_pred = X_train_scaled @ beta * self.y_std + self.y_mean
+            # y_test_pred = X_test_scaled @ beta * self.y_std + self.y_mean
 
             # Calculate MSE and R^2 for both training and test data
-            mse_train[i] = self.mse_own(y_train_pred, self.y_train)
-            mse_test[i] = self.mse_own(y_test_pred, self.y_test)
-            r2_train[i] = self.r2_own(y_train_pred, self.y_train)
-            r2_test[i] = self.r2_own(y_test_pred, self.y_test)
+            mse_train[i] = self.mse_own(y_train_pred, self.y_train_scaled)
+            mse_test[i] = self.mse_own(y_test_pred, self.y_test_scaled)
+            r2_train[i] = self.r2_own(y_train_pred, self.y_train_scaled)
+            r2_test[i] = self.r2_own(y_test_pred, self.y_test_scaled)
 
         return beta, mse_train, mse_test, r2_train, r2_test
 
