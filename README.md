@@ -4,6 +4,8 @@
 ## Project overview:
 This is the code for reproducing our results in _Project 1_ of **FYS-STK4155** for the Autumn 2023 semester at UiO. It contains functions for making a prediction for the entire dataset after a model has been fitted with the training data, and functions for plotting and creating latex tables. The graphs from the plotting are stored in the _plots_ folder while the Latex tables are stored in the _tables_ folder.
 
+Also for our Lasso regression we used the defualt iterations of $1000$ iterations.
+
 
 ## Installation instructions:
 To install all the necessary packages, run this code:
