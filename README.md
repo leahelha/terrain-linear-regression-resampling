@@ -2,7 +2,7 @@
 
 
 ## Project overview:
-This is the code for reproducing our results in _Project 1_ of **FYS-STK4155** for the Autumn 2023 semester at UiO.
+This is the code for reproducing our results in _Project 1_ of **FYS-STK4155** for the Autumn 2023 semester at UiO. It contains functions for making a prediction for the entire dataset after a model has been fitted with the training data, and functions for plotting and creating latex tables. The graphs from the plotting are stored in the _plots_ folder while the Latex tables are stored in the _tables_ folder.
 
 
 ## Installation instructions:
@@ -31,7 +31,7 @@ The dataset is digital terrain data of Norway. It is the file **SRTM_data_Norway
 
 
 ## Usage guide:
-If you run the file **topological.py**, you run the analysis on topograpical data:
+If you run the file **topological.py**, you run the analysis and plotting on topograpical data:
 
 ```Python
 python3 topological.py
@@ -43,7 +43,7 @@ while if you run the file **reg_class.py** as a script:
 python3 reg_class.py
 ```
 
-it will be on the synthized dataset (made from the _Franke function_).
+the analysis and plotting will be on the synthized dataset (made from the _Franke function_).
 
 The files **cross_val.py** and **cross_val_debug.py** were created for developing and debugging the cross validation code in **reg_class.py** and are irrelevant for the analysis. However to run the other resampling method, _bootstrap_, you need to run:
 
