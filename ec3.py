@@ -5,6 +5,22 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.utils import resample
+from reg_class import regression_class
+from pathlib import Path
+
+def savefig(fname, folder = None, fig = None):
+    if folder is None:
+        folder = "plots"
+
+    root_path = Path.cwd()
+    abs_path = root_path / folder
+    abs_path.mkdir(exist_ok=True)
+
+    filename = abs_path / fname
+    if fig is None:
+        plt.savefig(filename)
+    else:
+        fig.savefig(filename)
 
 np.random.seed(2018)
 
@@ -71,10 +87,10 @@ for degree in range(maxdegree):
     print('Bias^2:', bias[degree])
     print('Var:', variance[degree])
     print('{} >= {} + {} = {}'.format(error[degree], bias[degree], variance[degree], bias[degree]+variance[degree]))
-
     
 plt.plot(polydegree, error, label='Error')
 plt.plot(polydegree, bias, label='Bias')
 plt.plot(polydegree, variance, label='Variance')
 plt.legend()
+savefig("bootstrap_resample.pdf")
 plt.show()
