@@ -1,4 +1,4 @@
-# FYS-STK4155: Project 1:
+# An Exploratory Research Into Linear Regression and Resampling Techniques for Studying Topographical Data:
 
 
 ## Project overview:
